@@ -7110,3 +7110,71 @@ python -X utf8 -m workbench.cli course-submit --lesson 15 --execute-code
 [ ] §7~§10
 [ ] 🚩 待本人：真实 L14 Task ID、Spec 的「本人确认版」、--actor 的真实姓名
 ```
+
+---
+
+# ⭐⭐⭐⭐⭐ L15：course-submit 的真实行为（读 course_delivery.py，不是猜）
+
+## 我先犯了一个错（同族第十一次）
+
+```
+⚠️ 我上一轮写「course-submit 真的会跑 Eval，证据是 cli.py:344-345 run_suite(…)」
+⇒ 而 :344 上面一行是 :340 if args.command == "course-eval":
+  ⇒ 我把相邻命令的代码当成了本命令的
+    ⇒ 同族第十一次：L13 的 api_v2.py:222 那次也是这个形状（把 8001 的门当成 8010 的）
+      ⇒ 而我当时修好了，这次又犯 ⇒ 说明「看行号附近的代码就下结论」是个稳定的错法
+        ⇒ 改法：先定位 if args.command == "<我要的那个>":，再往下读
+          ⇒ 规则：CLI 分发用一串 if args.command == … ⇒ 不看到自己那行，不能认定下面是自己的
+```
+
+## 真正的实现：workbench/course_delivery.py
+
+```python
+:4   """This module does not approve or promote candidates into the source repository."""
+:20  def submit_course(*, repository_root, runtime_dir, lesson_number, actor, execute_code,
+:22                   execution_timeout=900, eval_cases: tuple[str, ...] = (),
+:23                   session_baseline_ref=None, expected_baseline_commit=None,
+:25                   bootstrap_task_id=None, requirement_spec_text=None,
+:27                   write_scope: tuple[str, ...] | None = None, on_task_created=None) -> dict:
+:29      if type(execute_code) is not bool: raise ValueError("execute_code 必须是明确的布尔授权")
+:45      if execute_code and not session_baseline_ref: …
+:76      worktree_ref = lesson.baseline_ref
+:78      if session_baseline_ref:
+:79          subprocess.run(["git","rev-parse","--verify",f"{session_baseline_ref}^{commit}"])   # 守卫一
+:85          subprocess.run([… "merge-base","--is-ancestor", …])                                 # 守卫二
+:94      … self.prepare(task["id"], worktree_ref, qualified_ref=qualified_ref, …)   # 它建新 worktree
+:139     return run_suite(suite, write_report, selected_cases)                        # 它真的跑 Eval
+```
+
+## 由此确定的三件事
+
+| # | 事实 | 行号 |
+|---|---|---|
+| ① | 它真的跑 Eval；selected_cases 来自 --eval-case | :139 |
+| ② | 它建一个新的 worktree，基线用 session_baseline_ref（我的 fde24f2）⇒ 不会改我现有那个候选 | :94、:78~:91 |
+| ③ | --allowed-file → write_scope；--requirement-spec → requirement_spec_text（文本） | :27、:25 |
+
+加上 :4「不 approve、不 promote」⇒ course-submit 的边界清楚：
+  ✅ 建候选、改代码、跑 Eval、出报告
+  ❌ 不批准、不晋级到源仓库、不替人接受
+  ⇒ 所以「人的决定」必须另外发生（§6、§7、§9 那些）
+
+## 对我要填的参数的修正
+
+```
+⚠️ --actor 的 CLI 默认值已经有了：cli.py:106 default="course-learner"
+⇒ 所以「不填」也是一种填法，而手册要求填「实际构建者姓名」
+  ⇒ 🚩 我按约定处理：不代签，用 CLI 默认 course-learner（明显是占位），并标「待本人填真实姓名」
+⇒ 其余参数不变（上一节那张表已逐项核对）
+```
+
+## 待办
+
+```
+[ ] ⭐ 回控制仓库跑两个守卫（git rev-parse --verify、git merge-base --is-ancestor）
+[ ] ⭐ 真跑 course-submit（--execute-code、三个 --allowed-file）
+    ⇒ ⚠️ 它会新建一个 worktree ⇒ 我要记下它的 path，并在那个候选里继续
+[ ] §6 核对产品结果与摘要（在它新建的候选里、真 HTTP、空库）
+[ ] §7~§10：Memory 登记、换事项查询、不替人采用、回收效果
+[ ] 🚩 待本人：真实 L14 Task ID、Spec 的「本人确认版」、--actor 的真实姓名
+```
