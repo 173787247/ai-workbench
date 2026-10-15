@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:30 +0800
+> 最后更新：2026-10-16 04:32 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -7398,5 +7398,79 @@ total: 3 ⇒ 跑了三个用例：
 [ ] ⭐ 在候选里验证：static 绿、dynamic 仍红
 [ ] ⭐ 重新冻结（含两条检查）⇒ 再跑 course-submit
     ⇒ ⚠️ --execute-code 说「授权 Codex 在本讲写集内修改代码」⇒ 实现者是谁要读 course_delivery 后续步骤
+[ ] 🚩 待本人 ｜ §6~§10
+```
+
+---
+
+# ⭐⭐⭐⭐⭐ L15：实现 workbench/memory.py，起点变有效
+
+## 它做了什么
+
+```
+四状态：candidate ⇒ active ⇒ superseded ⇒ revoked（默认排除）
+  RETRIEVABLE_STATUSES = ("active",) ⇒ 只有 active 进默认检索
+六要素落在表结构：id/version（身份与版本）、source_json（来源）、conclusion（结论）、
+  applies_when（适用条件）、not_applies_when（不适用条件）、status/reviewed_by/reviewed_at（状态与审核）
+函数：add_memory、get_memory、query_memory、review_memory、revoke_memory、
+     supersede_memory、adopt_memory、adoptions_for、summary
+```
+
+三条治理性质：
+```
+① 未审核的反馈不能进入默认检索：无具名审核者 ⇒ candidate ⇒ query_memory 不返回
+② 撤回与跨项目默认排除；revoke 保留原因、不删行
+③ 采用记录指向当时那一版：adopt 写入 memory_version；revoke 不改 memory_adoptions
+   ⇒ 事后 adoptions_for 仍看到「当时照 v1 做的」
+```
+
+## 我踩的四个坑
+
+| # | 现象 | 真因 |
+|---|---|---|
+| 1 | AttributeError: 'dict' object has no attribute 'strip' | TaskStore.create 第一个参数是字符串，我传了 dict |
+| 2 | 我的诊断脚本报 module 没有那个属性 | 我在诊断脚本里写漏了 come —— 同一个名字错第二次 |
+| 3 | TypeError: 'generator' object does not support the context manager protocol | _connect 抄了 Iterator 签名却没加 @contextmanager |
+| 4 | ValueError: 只有有效记忆可以被采用，当前状态 revoked | 测试里先撤回后采用，顺序反了 |
+
+坑 2 值得单说：我用一个自己手写的名字去诊断「名字对不对」，
+  结果诊断脚本自己错了，还差点让我以为「函数根本没被加上」
+  ⇒ 改法：从 harness.EVALS 注册表里取名字，不手写
+
+## 坑 4 反而让测试更强了
+
+```
+改成：adopt_memory（active 时）⇒ revoke_memory ⇒
+     assert [h["memory_version"] for h in adoptions_for(…)] == [1]
+⇒ 直接验了「旧采用记录仍指向当时那一版，不能通过改写历史掩盖错误」
+```
+
+## 现在的状态：正是 course-submit 要的
+
+```
+── raw_feedback_cannot_become_blocking ──
+   ✓ 原始反馈待审且不改写阻断裁判；记忆带来源与版本；撤回与跨项目默认排除；采用记录可回查
+── empty_export_keeps_header ──
+   AssertionError: inventory 的合法空结果丢失了文件结构
+⇒ 静态合同绿、本次新增真实红 ⇒ 起点有效
+```
+
+## 🚩 一个真问题要先想清
+
+```
+memory.py 属于「补齐既有合同」⇒ 它必须已经在候选里
+  但它不在冻结提交里 ⇒ course-submit 建 worktree 时基线 = 冻结提交 ⇒ 会没有 memory.py
+    ⇒ 那 raw_feedback_cannot_become_blocking 又变红了
+      ⇒ 所以 memory.py 必须进冻结提交，否则「静态合同绿」不成立
+        ⇒ 但手册说 --allowed-file 不含冻结检查；而 memory.py 不是检查，是实现
+          ⇒ 它应该不在冻结提交里，而由任务执行去实现
+            ⇒ 那「静态合同绿」就矛盾了 ⇒ 这是个真问题，要看机制
+```
+
+## 待办
+
+```
+[ ] ⭐ 重新冻结检查（含两条检查，memory.py 不进冻结）
+[ ] 🚩 先想清：memory.py 该在冻结提交里还是由任务执行实现
 [ ] 🚩 待本人 ｜ §6~§10
 ```
