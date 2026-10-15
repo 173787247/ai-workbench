@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:42 +0800
+> 最后更新：2026-10-16 03:44 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -4355,4 +4355,105 @@ tests/test_http_api.py:178  self.assertEqual("conflict", body["error"]["code"])
    · 要求「某端点存在」⇒ 必须发出一次请求看响应
    · 要求「某文件/能力存在」⇒ 必须 find/grep 到位，不能凭印象
    · 报告「做到了」之前先问：命令是什么？输出是什么？
+```
+
+---
+
+# ⭐⭐⭐⭐⭐⭐⭐ L13：410 的确切来源找到了（**而它推翻了我上一轮的更正**）
+
+## 决定性证据（`api_v2.py:222-229`，照抄）
+
+```python
+harness_paths = (
+    "/api/v1/delivery", "/api/v1/tasks", "/api/v1/feedback",
+    "/api/v1/evolutions", "/api/v1/course",
+)
+if not self.enable_legacy_workbench and path.startswith(harness_paths):
+    return self._error(
+        HTTPStatus.GONE, "standalone_harness",
+        "Harness Workbench 已拆分为独立平台，请访问 http://127.0.0.1:8010",
+    )
+```
+
+⇒ 410 的确切来源就是这个，而它自己写明「请访问 8010」
+⇒ ⭐ 任务 API 的正式位置是 8010（platform_server.py + platform_api.py）
+  ⇒ ⭐ 所以我在 platform_api.py 里做四条修复是对的
+    ⇒ ⚠️ 而我上一轮写「改错文件」—— 那是我读错了
+
+## 我上一轮的判断错在哪
+
+```
+⚠️ 我写：「platform_api.py 是 8010 用的；8001 首页用 server.py ⇒ 我改错了地方」
+⇒ 前半对，后半错：
+   ✅ 对：8001 走 server.py ⇒ api_v2.APIRouter
+   ❌ 错：「所以改 platform_api.py 是错的」—— api_v2 里那段明确把
+      /api/v1/tasks 判 410 并指向 8010
+      ⇒ 所以 8010 才是任务 API 的家，8001 那份是故意关掉的
+⇒ 而我还援引 AGENTS.md：「harness_web/：可选完整 Harness 驾驶舱，默认 8010，
+  不属于 L01～L16 通过标准」
+   ⇒ ⚠️ 那句说的是页面/驾驶舱，不是任务 API 本身
+   ⇒ 我把「驾驶舱不属于通过标准」读成了「8010 那条路不算数」
+     ⇒ 这是一次把限定条件读掉的错误
+```
+
+## 而 test_http_api 那个用例为什么还期望 201
+
+```
+tests/test_http_api.py:185  assertEqual(201, status)
+⇒ 真相：它构造 App 时没开 enable_legacy_workbench（:33  self.app = App(self.tmp.name)）
+  ⇒ 而那道闸门在 not enable_legacy_workbench 时返回 410
+⇒ 所以那个用例期望的是「8001 仍然提供任务 API」，而代码已经把它拆走了并留下 410 指路
+  ⇒ 结论：这个用例与当前实现不一致 ⇒ 它过时了
+    ⇒ 但「过时」不等于「该删」，也不等于「该按它改回 8001」
+      ⇒ 要判断的是：本讲要求任务 API 在哪一侧
+        ⇒ 手册 §4.1 说回 8001 首页登记需求；§2.1 的参考实验 task_api_lab.py 自己起临时服务
+          ⇒ 手册没规定实现落在哪个端口，只要求「两个最小入口」
+        ⇒ ⭐ 所以两种做法都能成立：
+          ① 在 8010（platform_api.py）做 —— 沿用代码里的「拆分」决定
+          ② 在 8001（api_v2.py）做 —— 并解开那道 410 闸门
+          ⇒ 🚩 选哪一个牵涉课程对「驾驶舱是否必做」的定位，要请本人定
+```
+
+## 本轮净收获（不再是猜测）
+
+```
+✅ 410 成因：api_v2.py:222 的 harness_paths 闸门，消息指向 8010
+✅ 409 已在 api_v2.dispatch 的异常表里（Conflict ⇒ HTTPStatus.CONFLICT，码 "conflict"）
+   ⇒ 我在 platform_api 里加 IdempotencyConflict 是后加的重复
+✅ _error(status, code, message) ⇒ 错误体嵌套，api_v2 与 test_http_api 一致
+   ⇒ 而我给 platform_api 加的是平铺的 ⇒ 形状不统一
+✅ 真 HTTP 的证据：AssertionError: 201 != 410（真起服务、真发请求）
+```
+
+## 我这一讲的错误清单（四次，同一族）
+
+```
+⚠️ ① 「两个端点不存在」 —— 用关键词扫描代替真调用
+⚠️ ② 「真起服务测过了」 —— 其实调的是 dispatch()，没走 HTTP
+⚠️ ③ 「我改错了文件」 —— 没读到 api_v2.py:222 那道闸门就下结论
+⚠️ ④ 把 AGENTS.md 的「驾驶舱不属于通过标准」读成「8010 这条路不算数」
+⇒ 四次同形：证据只支持到 A，我说成了 B
+⇒ ✅ 对策：说「某处没有」前必须把那个文件的相关分支读完；
+   说「改了 A」前必须确认 A 是请求路径上真正被调用的那个；
+   引用规范时必须连限定语一起引；
+   ⭐ 每个结论后面注明：它是命令输出，还是我的推断
+```
+
+## 🚩 新增待你定（连同前面六件，共七件）
+
+```
+🚩 0. 本讲两个最小入口落在 8010（platform_api.py，沿用代码拆分决定）
+      还是 8001（api_v2.py，并解开 harness_paths 的 410 闸门）？
+   ⇒ 两条路的事实我已写清；选哪条牵涉课程定位，我不独断
+   ⇒ 在等到答案前，我按「沿用代码现状（8010）」推进，并标注待确认
+```
+
+## 待办
+
+```
+[ ] ① 8010 那条路的四条做完整（已做四条，还要接上 submit_key）
+[ ] ② 用真 HTTP 验收（App + make_handler + ThreadingHTTPServer），不是 dispatch()
+[ ] ③ 新增 eval/cases.py 用例，注册到 harness.py:110 mods，先红后绿
+[ ] ④ §5 真实采购核对 ｜ §6 同伴复验与迁移
+[ ] ⑤ test_http_api:185 的 201 != 410 ⇒ 要么它过时，要么实现该回 8001（同第 0 项）
 ```
