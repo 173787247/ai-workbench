@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:34 +0800
+> 最后更新：2026-10-16 04:36 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -7688,4 +7688,79 @@ tools/codex-substitute.py（322 行）有 apply_l05/l07/l09/l10，接口是「�
 [ ] ⭐ 设 FLOWERP_CODEX_COMMAND，重跑 course-submit，看差分判定变 True
 [ ] §6 核对产品结果（真 HTTP、空库、四条导出都该有表头）
 [ ] §7~§10 ｜ 🚩 待本人
+```
+
+---
+
+# 🎉🎉🎉 L15 受控执行成功：红 ⇒ 绿，implementation_evidence = True
+
+## 差分判定十项全过
+
+```
+:87 spec_ready  ⇒ executing   开始受控执行
+:88 executing   ⇒ executing   受控执行阶段完成
+:89 executing   ⇒ evaluating  运行统一阻断级 Eval
+:90 evaluating  ⇒ review      阻断级 Eval 已通过，等待具名人工审核
+:91 review      ⇒ review      课程红绿差分判定已完成
+
+checks：baseline_was_red ✅｜candidate_is_green ✅｜candidate_changed ✅
+        no_out_of_scope_writes ✅｜real_code_execution ✅｜execution_succeeded ✅
+        reports_are_valid ✅｜same_eval_cases ✅｜same_isolated_workspace ✅
+        distinct_eval_attempts ✅
+
+pre_summary  = {total:3, passed:2, blocking_failed:1, decision:block}
+post_summary = {total:3, passed:3, blocking_failed:0, decision:pass}
+accepted = True；implementation_evidence = True
+⇒ 执行前红、范围内 Diff、执行后绿 —— 正是 §5 要的
+  ⇒ 状态停在 review：「等待具名人工审核」，它不替人接受
+```
+
+## 平替件 tools/l15-codex-exec.py
+
+```
+挂点：workbench/codex_command.py 的 FLOWERP_CODEX_COMMAND
+契约：argv = exec --json --sandbox workspace-write --ephemeral
+             --output-schema <p> --output-last-message <q> --cd <ws> -
+      stdin = 一段中文说明 + 「任务上下文：」 + 一个 JSON 块
+      要做 = 只改 write_scope 列的文件
+      写出 = <q> 恰四字段 summary/tests/risks/next_step
+业务修复：import_export.py 装 EXPORT_COLUMNS 四类规格；
+         reports.py 的 to_csv 接受 fieldnames，无规格时空结果明确抛错
+```
+
+## 五个坑
+
+| # | 现象 | 真因 |
+|---|---|---|
+| 1 | Codex 退出码 127 | 本机没有 codex |
+| 2 | 执行「成功」但 changed_files 空、17ms | prompt 不是纯 JSON，write_scope 解析成空 |
+| 3 | 四条导出绿了，报表那条仍红 | to_csv 无规格时仍返回空串 |
+| 4 | heredoc SyntaxError | shell 里写 Python 字符串嵌套 ⇒ 改用 edit 工具 |
+| 5 | ignored_flags ["-"]、summary 双重前缀 | 小瑕疵，已修 |
+
+坑 2 最关键：prompt 是「散文 + JSON 块」，必须用平衡括号切出来，不能整段 json.loads
+
+## 十次尝试的完整轨迹
+
+```
+1 TASK-9EE838679C  queued⇒failed      用例名少一个 come
+2 —                拒收               动态 Eval 不能重复静态合同
+3 —                拒收               Spec 验收段没点名
+4 —                拒收               Spec 围栏未闭合
+5 TASK-08196401F9  queued⇒failed      静态合同红（缺 memory.py）
+6 TASK-11C7B250D2  executing⇒rework   无 codex（127）
+7 TASK-920AA1587A  evaluating⇒rework  write_scope 空（prompt 解析）
+8 TASK-21D4783337  evaluating⇒rework  to_csv 空仍返回空串
+9 TASK-07009D428A  evaluating⇒rework  平替件没改到（heredoc 语法错）
+10 TASK-AD82BFE14C review             ✅ 成功
+```
+
+## 待办
+
+```
+[ ] §6 核对产品结果与摘要（在 TASK-AD82BFE14C 的 worktree 里，真 HTTP、空库）
+[ ] 读 §1~§4、§6~§10 细则、SUBMISSION.md 模板、个人记忆集格式.md、examples/skills/
+[ ] §7 登记 Memory ⇒ §8 换事项查询 ⇒ §9 不替人采用 ⇒ §10 回收效果
+[ ] 🚩 待本人：真实 L14 Task ID、Spec 的「本人确认版」、--actor 真实姓名、
+    TASK-AD82BFE14C 的具名审核（现在停在 review，等人）
 ```
