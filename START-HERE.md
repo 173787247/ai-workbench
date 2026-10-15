@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:53 +0800
+> 最后更新：2026-10-16 03:54 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -5222,4 +5222,76 @@ workbench_web/app.js 的：
 [ ] ⭐ 先确认候选里 workbench_web/app.js 在不在、那两个函数叫什么（不凭印象）
 [ ] 建 L14 候选，先看有没有 if False and 型的剥离
 [ ] 🚩 待本人定八件（L13 的两件仍挂着）
+```
+
+---
+
+# ⭐⭐ L14 建候选：能力不存在型，而参考实现在别处
+
+## 课程合同
+
+```
+phase: operate
+⭐ workbench_increment：「可查询任务与工作台面板」｜ erp_increment：「交付 ERP 操作页」
+request：「在无密钥 Web 面板展示 ERP 权威状态和交付证据，并能下钻到任务事件」
+⭐ write_scope: web/ ｜ workbench/ ｜ workbench_web/ ｜ tests/
+⭐ acceptance: ① 页面数据来自 API 而非静态假数据 ② DOM、API、SQLite 与 ERP 状态可对账
+              ③ 页面不包含凭据
+eval_cases: delivery_evidence_and_review_controls ｜ web_api_and_persistence_projection_agree
+            ｜ no_committed_secrets
+```
+
+## 起点：没有 if False and（与 L10/L12 不同）
+
+```
+git diff HEAD --stat ⇒ 只有 course/baselines/PROGRESSION.json 被删 17 行
+全仓 grep 找 if False and ⇒ 无结果
+⇒ 本讲也是「能力不存在」型，不是「剥离增量」型（与 L13 同类）
+```
+
+## 两处辅导资料与候选不一致
+
+```
+① 辅导资料引用 workbench_web/app.js 的 loadDetail() 与 clearEvidence()
+   ⇒ 而候选里：workbench_web/ 目录不存在；app.js 只有 ./web/app.js(702 行)
+     和 ./harness_web/app.js；两个函数名都搜不到
+   ⇒ 这是 L12 的同型教训重现：辅导资料引用的路径是另一个版本的
+     ⇒ AGENTS.md 说的 workbench_web/（8001、workbench.db）是控制仓库的布局
+       ⇒ 客户候选里只有 web/ ⇒ 两个仓库结构不同，不能按记忆套
+     ⇒ 所以修法要按辅导资料的原理设计，不能照抄函数名
+
+② 但那个「绿色正常」在 web/app.js 里找到了：
+   :66 if(active)$("#sync-state").classList.remove("error");
+   :68 $("#sync-state").classList.toggle("loading",busy);
+       $("#sync-state span").textContent=busy?"同步中…":"数据已同步";
+   ⇒ 「数据已同步」正是辅导资料点的那句「不能继续显示没有时间标记的绿色正常」
+     ⇒ 而它只有三态：loading / error / 默认，没有「最新状态未知 + 最后获取时间」
+       ⇒ 这就是本讲要修的入口
+```
+
+## 其他相关的线
+
+```
+:40  async function api(path, options)   ⇒ 所有请求都走它
+:163 async function loadBase() ｜ :167 async function loadPage(page, notify)
+:199 async function openCommand() ⇒ Promise.all 并发拉五个 API
+   ⇒ 这里最可能出现乱序：五个响应回来顺序不定
+```
+
+## ⚠️ 又一处我自己的错（第五次同族）
+
+```
+⚠️ 我写 START-HERE 的 Python 脚本时，在双引号字符串里又写了双引号
+   （「找到"数据已同步"入口」那一段）⇒ SyntaxError，脚本整体没跑
+⇒ ⭐ 同族错误第五次：heredoc 反引号、三引号套三引号、双引号套双引号
+⇒ ✅ 对策：**Markdown 一律用「」代替 " 来引用词句**，并且**写 Markdown 用 write 工具或独立文件**
+```
+
+## 状态
+
+```
+L01~L13 ✅ ｜ L14：合同与起点读完，候选已建，2 个记录
+下一步：读手册分步与 SUBMISSION 模板 ⇒ 真跑一次 Web 面板复现缺陷
+       （要真起服务、真发请求 —— L13 的教训）
+🚩 待本人定八件
 ```
