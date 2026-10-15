@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 02:48 +0800
+> 最后更新：2026-10-16 02:52 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -2020,3 +2020,61 @@ $ ./.venv/bin/python -X utf8 -m agent.loop --max-rounds 1 --token-budget 30000
 [ ] `.runtime/l10-run-context.json` ⚠️ **现在不在** ⇒ **手册说 §4 由本人确认后生成** ✓
 [ ] §3 建设（**保持发货仍红**）
 [ ] ⚠️ 待补：**PPT 288 行 ✗ `reference/` ✗ `assets/` ✗ `examples/skills`**
+
+
+---
+
+# ⭐ L10 §3 建设完成（**§4 待本人**）
+
+## ⭐ 两处校验补齐（**手册 §3 第 ④ 条"验证…父任务"** ✓）
+
+```
+`workbench_runtime` 必须是目录 ✗ 下面必须有 `workbench.db` ✓
+`source_task_id` 必须**真的存在于该任务库**（`TaskStore.get`）⇒ 不存在报「**父任务不存在：…**」✓
+⇒ 实测：夹具编号 ⇒ 拒绝 ｜ 真父任务 `TASK-224B5F97B6` ⇒ 通过 ｜ 目录不存在 ⇒ 拒绝 ✓
+```
+
+## ⚠️⚠️ 而它暴露了我一个**吞错**（**同一个形状 ✗ 又是第 N 次**）
+
+```
+⚠️ 夹具里我写的是 `try: store.create(…) except Exception: pass  # 已存在就沿用`
+⇒ 测试报「**父任务不存在：TASK-FIXTURE**」✓
+⇒ ⭐⭐ **真因是 `ValueError: 任务编号格式无效`** ——
+   `task_store.py:148`：`re.fullmatch(r"TASK-[A-Z0-9]{10}", task_id)` ⇒ `TASK-FIXTURE` 只有 9 字符 ✓
+   ⇒ ⚠️ **`except Exception: pass` 把真因吞了 ⇒ 症状与真因隔了两层** ✓
+⇒ ✅ 修：编号改 `TASK-FIXTURE001`（10 字符）✗ **去掉那个 except** ✓
+⇒ ⭐ **同族清单**：L06「git diff 是空的」✗ L08「没传 --report-path」✗
+   L09「14 个文件都变了」✗ L10「越界检查只记录」✗ 这次「已存在就沿用」
+   ⇒ **每次都靠"再查一次真因"纠正** ✓
+```
+
+## ⭐ 夹具已清（**别和 §4 的正式产物混淆**）
+
+```
+`l10-run-context.json` ⇒ **改名 `l10-run-context.FIXTURE-ONLY.json`**
+⇒ ⭐ **入口按正式名字找不到 ⇒ 现在正确地报"缺少授权上下文"** ✓
+   ⇒ **这正是 §3 结束时应有的状态**（**§4 的正式上下文还没由本人确认生成** ✓）
+```
+
+## ⭐ 测试：**Ran 17 tests ✗ OK** ✓
+
+```
+上下文：缺失 / candidate 不符 / 写集空 / 用例空 / 越出 flowerp / 含 `..` / 缺字段
+停止：max_rounds=1 零编码 ✗ 报告少一项 ✗ 多一项 ✗ 非报告 ✗ 回归红不得 converged ✗
+     全绿 converged ✗ 越界停 ✗ 允许内改动不误判 ✗ 未知用量 ✗ 执行器异常 ✗ 套件拒绝显式清单
+```
+
+## 🚩 L10 待本人
+
+```
+**§4 一次性授权上下文**（`control_root` ✗ `control_python` ✗ `workbench_runtime` ✗
+  `source_task_id` ✗ `requirement_id` ✗ `actor` ✗ `candidate` ✗ `business_spec` ✗
+  `allowed_files` ✗ `required_cases` **十个字段**）
+⇒ ⭐ **填默认值我可以做 ✗ 但"本人核对一次授权上下文"是手册的停点** ✓
+```
+
+## 待补
+
+```
+⚠️ **PPT 288 行 ✗ `reference/参考说明.md` ✗ `assets/README.md` ✗ `examples/skills`**
+```
