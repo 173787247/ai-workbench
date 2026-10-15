@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 02:30 +0800
+> 最后更新：2026-10-16 02:31 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -1212,4 +1212,52 @@ summary: {"total":22, "passed":19, "blocking_failed":1, "observing_failed":2, "d
     ⇒ 手册说"先处理" ✗ **记为独立待办 ✗ 不混进 A/B/C** ✓
 [ ] **B 的修复计划**（**只含工作流与必要证据实现文件 ✗ 不含业务服务** ✓）
 [ ] 🚩 **建候选分支 ✗ Actions variables ✗ 推送 ✗ PR ✗ 真实 Run** ⇒ **待本人** ✓
+```
+
+
+---
+
+# ⭐ L08 §5 续三/四（**冻结名单 ✗ 预跑通过**）
+
+## ⭐ 冻结的三项 `--case`（**A/B/C 三次逐字相同** ✓）
+
+```
+可选的：`PROJECT_CASES` 共 **19 项 ✗ 全 blocking ✗ 默认入口一个都不跑** ✓
+
+**冻结 3 项**：
+  ⭐ sales_credit_and_atomic_reservation  —— 本讲验收项（acceptance 第二条）
+  ⭐ cancellation_releases_reservation    —— 与预占直接交互（AGENTS.md 业务规则 3）
+  ⭐ order_total_matches_lines            —— 多行金额一致性（**L07 就栽在这类**）
+⇒ ⚠️ **这是我的选择 ✗ 手册没要求全列** ✗ **标为"本人可改"**
+   ⚠️ **但一旦开始跑 A ✗ 就不能再改** ✓
+```
+
+## ⭐ 预跑（**退出码 1** ✓）
+
+```
+[PASS ] cancellation_releases_reservation   124 ms  FlowERP：<候选>；退出码 0；取消 reserved 订单后完整释放预占
+[PASS ] order_total_matches_lines            90 ms  FlowERP：<候选>；退出码 0；订单总额与明细计算一致
+[BLOCK] sales_credit_and_atomic_reservation 295 ms  AssertionError: FlowERP 检查失败：…（退出码 1）
+summary: {"total":3, "passed":2, "blocking_failed":1, "decision":"block"}
+⇒ ⭐ **失败项正是 L08 要保留的原子预占缺陷** ✓
+⇒ ⭐⭐ **证据文本自带手册要的四样**：
+   **名称**（用例名）✗ **数量**（`total: 3`）✗ **来源**（「**FlowERP：<候选绝对路径>；退出码 0**」）
+   ⚠️ **四表状态**：失败那条只给退出码 1 ⇒ **记为待核** ✓
+⇒ ⭐ **来源是候选路径 ✗ 不是控制仓库** ⇒ ✅ **没测错对象** ✓（**L07 的 Case C 那条的对照** ✓）
+```
+
+## 待审产物（**已同步成同一份名单** ✓）
+
+```
+ci_staging/eval.yml                  B/C 用
+ci_staging/eval-a-false-green.yml    A 用（**只改一处：吞掉失败传播** ✗ 真实退出码仍记录）
+⇒ ✅ 两个文件的 `--case` 名单**逐字相同** ✓
+⚠️ 活动的 `.github/workflows/eval.yml` **一字未动** ✓
+```
+
+## 🚩 仍在等你
+
+```
+**建候选分支 ✗ Actions variables（`L08_FLOWERP_REPOSITORY` ✗ `L08_FLOWERP_SHA`）✗
+ 推送 ✗ PR ✗ 真实 Run** —— **全在你的远程仓库上** ✓
 ```
