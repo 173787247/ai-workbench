@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 05:06 +0800
+> 最后更新：2026-10-16 05:07 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -9788,5 +9788,84 @@ checks = [{name: delivery_evidence_and_review_controls,
 [ ] ⭐ 实现 ar_aging_csv ⇒ 应绿 ｜ 控制仓库 eval/cases.py 加委托包装
 [ ] ⭐ 交付「完成思路 + 代码链接」
 [ ] ⚠️ spec_sha256 为空的原因（两个 Task 都空）
+[ ] 🚩 待本人：列规格取舍、具名审核、原使用者复验
+```
+
+---
+
+# 🎉🎉🎉 毕设：红 ⇒ 绿完成（独立 FlowERP 侧，20/20 全绿，无回归）
+
+## 五份报告串起来
+
+| 阶段 | 命令 | 退出码 | 读数 |
+|---|---|---|---|
+| ⭐ 起点基线 | --suite all | ✅ 0 | {total:19, passed:19, decision:pass} |
+| ⭐ 加检查后（未实现） | --case ar_aging_export_keeps_columns | ⚠️ 1 | {total:1, passed:0, blocking_failed:1, block} |
+| ⭐ 加检查后的整批 | --suite blocking | ⚠️ 1 | {total:20, passed:19, blocking_failed:1} |
+| ⭐ 实现之后 | --case ar_aging_export_keeps_columns | ✅ 0 | {total:1, passed:1, pass} |
+| ⭐ 完整套件 | --suite all | ✅ 0 | {total:20, passed:20, pass} |
+
+```
+⭐ 未实现时的红：AttributeError: 'ReportService' object has no attribute 'ar_aging_csv'
+   ⇒ 依据手册 D 区「未知用例、环境错误不算产品缺口」
+     ⇒ 这条红说明的是产品缺口
+⭐ 与起点逐条对账：新增 ['ar_aging_export_keeps_columns']；减少（空）；从绿变红的（无）
+   ⇒ 既没有回归，也不是「总数一样就算过」
+```
+
+## 改了什么（git diff --stat，80 insertions）
+
+```
+eval/cases.py      | 58 +
+eval/harness.py    |  1 +
+flowerp/reports.py | 21 +
+```
+
+```
+flowerp/reports.py：AR_AGING_COLUMNS 七列常量 + ar_aging_csv（自己用 csv.DictWriter 写）
+eval/cases.py：新检查验五件事 —— 空结果只一行且表头七列；不混汇总键；
+   有数据时行数等于 items 长度且 ar_aging 仍返回带 items 的 dict；只读；权限拒绝
+eval/harness.py：注册一行
+```
+
+## 两个先核实基线才发现的事实（都改了设计）
+
+```
+⚠️ ① 这个仓库的 to_csv 是旧版：
+   def to_csv(rows: list[dict]) -> str:  if not rows: return ""（静默空串，停在 L15-A 之前）
+   ⇒ 它没有 fieldnames 参数，也没有「无规格就拒绝」
+     ⇒ 所以我原 Spec 里写的「列规格进 REPORT_COLUMNS」做不到
+       ⇒ 改设计：ar_aging_csv 自己用 csv.DictWriter 显式给 fieldnames
+         ⇒ 这样它不依赖 to_csv 的任何版本
+⚠️ ② L15-B 的四个出口不在这个仓库里（grep 得 0）
+   ⇒ 因为 TASK-E978708191 也停在 review，没合入
+     ⇒ 所以本次交付不能依赖另一个未被接受的候选的状态
+       ⇒ 正是辅导资料那句的反向：也不能把另一份候选的存在当成前提
+```
+
+## 一处要如实记的不一致
+
+```
+⚠️ HEAD = 70660dd 的 message：「fix(flowerp): 修复采购原子性、空导出和日期筛选」
+   ⇒ 「空导出」就是 L15-A 的内容
+   ⇒ 而 L15-A 的 Task（TASK-AD82BFE14C）仍停在 review，从没被具名接受
+     ⇒ 所以改动进了产品仓库，而课程 Task 没走完审核 ⇒ 如实记，不解释成「已通过」
+```
+
+## 我自己又踩了一次
+
+```
+⚠️ 手动演示脚本写 ERPService(...).ensure_local_defaults() ⇒ AttributeError
+   ⇒ 又一次假设 API；而检查本身是对的（它用既有 _service() 夹具）
+     ⇒ 所以「检查绿」与「我的临时脚本错」可以同时成立，要分清
+```
+
+## 待办
+
+```
+[ ] ⭐ 控制仓库加委托包装（evaluate_case）并在 eval/harness.py 注册
+[ ] ⭐ 跑控制仓库完整套件，确认只多一条、无回归
+[ ] ⭐ 交付「完成思路 + 代码链接」
+[ ] ⚠️ spec_sha256 为空的原因；ar_aging 是否要在 API 层暴露（本次未做，属另一需求）
 [ ] 🚩 待本人：列规格取舍、具名审核、原使用者复验
 ```

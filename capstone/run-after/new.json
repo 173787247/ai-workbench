@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "suite": "blocking",
+  "requested_cases": [
+    "ar_aging_export_keeps_columns"
+  ],
+  "generated_at": "2026-10-15T21:06:44.390753+00:00",
+  "summary": {
+    "total": 1,
+    "passed": 0,
+    "blocking_failed": 1,
+    "observing_failed": 0,
+    "decision": "block"
+  },
+  "results": [
+    {
+      "name": "ar_aging_export_keeps_columns",
+      "level": "blocking",
+      "passed": false,
+      "duration_ms": 49,
+      "evidence": "AttributeError: 'ReportService' object has no attribute 'ar_aging_csv'",
+      "error": {
+        "type": "AttributeError",
+        "message": "'ReportService' object has no attribute 'ar_aging_csv'"
+      }
+    }
+  ]
+}

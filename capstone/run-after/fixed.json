@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "suite": "blocking",
+  "requested_cases": [
+    "ar_aging_export_keeps_columns"
+  ],
+  "generated_at": "2026-10-15T21:06:59.855158+00:00",
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "blocking_failed": 0,
+    "observing_failed": 0,
+    "decision": "pass"
+  },
+  "results": [
+    {
+      "name": "ar_aging_export_keeps_columns",
+      "level": "blocking",
+      "passed": true,
+      "duration_ms": 53,
+      "evidence": "应收账龄导出走明细七列、空结果留列名、不混汇总、只读，且权限拒绝不伪装成空文件",
+      "error": null
+    }
+  ]
+}
