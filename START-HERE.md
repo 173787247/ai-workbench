@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:45 +0800
+> 最后更新：2026-10-16 04:46 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -8502,5 +8502,89 @@ accepted = True；changed_files = ['flowerp/reports.py']；out_of_scope_files = 
 [ ] ⭐ examples/skills/feedback-evidence-review/SKILL.md（先自己预测一个反例）
 [ ] ⭐ 读 SUBMISSION.md 模板、写 L15 的 SUBMISSION.md
 [ ] 🚩 待本人：A 与 B 两个 Task 的具名审核、MEM-L15-EXPORT-EMPTY-001 改成 active、
+    采用决定的决定人与理由、§10 原反馈者复验
+```
+
+---
+
+# ⭐⭐⭐⭐⭐ L15 §10：四行证据表（`28-step10-evidence.md`）
+
+- **依据**：手册 §10 四行表 ✗ `feedback-evidence-review/SKILL.md`（29 行）✗
+  `references/review-cases.md`（30 行 ✗ 12 条结论跳跃）
+- ⚠️ Skill 自己说：「**不要提前填"全部通过"**」「**本文件存在不证明 Skill 效果已验证**」
+
+## 我的四条预测反例（动手前写的）
+
+| # | 预测的结论跳跃 | 是否犯过 |
+|---|---|---|
+| 1 | 两个 Task 都 review、检查都通过 ⇒ 可以说闭环完成 | ⚠️ 最容易犯 ⇒ 本表如实标 |
+| 2 | B 检索到了 A 的经验 ⇒ 说明复用成功 | ✅ 没犯（retrieved 实际是 []） |
+| 3 | 两个 Task 的 post_summary 都 3/3 pass ⇒ 业务效果确认 | ⚠️ 是 ⇒ 标为未观察 |
+| 4 | L14 的 Escape 焦点缺陷已经在 L15 修了 | ✅ 没犯（同一未修缺陷，关联为新观察） |
+
+## 四行表的核心读数
+
+```
+表一 来源与事项 A：原话 ✅｜Spec ✅｜真实失败 ✅｜修复 Task TASK-AD82BFE14C ✅
+  Diff ✅ changed_files 两个文件、out_of_scope 空｜独立 Eval ✅ 2/3 block ⇒ 3/3 pass
+  ⚠️ 业务结果：未做真 HTTP（该 worktree 没有 flowerp/__main__.py），只做了直调记字节
+  🚩 人审：缺（reviewed_by = None）
+表二 个人经验：三条记忆，task_id = TASK-AD82BFE14C，边界写全
+  ⚠️⚠️ 两条 candidate、一条 revoked，没有一条 active；reviewed_by 空，我不代签
+  ⭐ Skill 第 6 条 ⇒ candidate 不得被默认当作依据 ⇒ 所以 §8 检索返回 [] 是正确行为
+表三 查询与 B：B1 先写的 relevant = [MEM-L15-EXPORT-EMPTY-001]，实际 retrieved = []
+  Top-k 2、project FlowERP｜--evaluate 退出码 1、decision fail、Q4 passed false
+  快照 8e2cb5a7…｜引用建议：按 rule 如实写「未找到可用记忆」
+  🚩 采用决定：缺（无采用/拒绝/补查、无决定人、无理由）
+  ✅ 新 Task TASK-E978708191，不同于 A；基线含 A 的未审核改动已在三处写明
+表四 实际效果：🚩 原反馈者观察缺 ⇒ 手册「没有真实反馈者复验时，效果确认保持待完成」
+  适用边界 ✅ 写了，且 B 真实检验了它（报表列名不能照搬库存导出）
+  失败时的修订或停用 ✅ 有一条 revoked 反例
+```
+
+## 剩余问题六条（不含「满意」这种词）
+
+```
+① A 与 B 都停在 review ⇒ 没有具名审核 ⇒ 不能说闭环完成
+② --evaluate 是 fail ⇒ 因为两条记忆都是 candidate，不是 fixture 写错
+③ 没有采用记录 ⇒ Skill 第 8 条「没有跨事项采用则标为候选或待验证」
+④ B 的基线含 A 的未审核改动 ⇒ 已写明，但它是事实上的前置依赖
+⑤ L14 的 Escape 焦点缺陷未修 ⇒ 按 review-cases「新观察另存并关联旧问题」
+⑥ ar_aging 返回 dict，没有 CSV 出口 ⇒ 不在 B 的范围，是新缺口
+```
+
+## Skill 12 条反例逐条自评
+
+```
+⚠️ Task 在 review、3 项检查通过、所以已发布 ⇒ 我没有声称已发布，本表明确标缺人审
+✅ 用户说取消审批方便、因此删采购审批 Eval ⇒ 不适用（我没删任何 Eval）
+⚠️ 源 Task 的旧报告通过、所以反馈修复完成 ⇒ 我做了独立的 B Task，不是靠 A 的报告
+✅ 文件哈希一致、所以验收断言正确 ⇒ 不适用（我用字节数与表头内容）
+✅ 同一键提交不同结论仍返回旧记录 ⇒ 不适用
+⚠️ 保存了一条经验并创建 Skill、所以形成持续学习 ⇒ 我没这么说，本表标缺采用与验证
+✅ Top-1 相似度最高、所以直接写进 Spec ⇒ 没犯（retrieved 是空，我如实写未找到可用记忆）
+✅ 命中来自另一个项目、但内容很像 ⇒ 没犯（设了 project 过滤且实测跨项目不进）
+✅ 撤回记忆仍排前两名 ⇒ 没犯（默认排除，--include-revoked 才出现且带 warning）
+✅ 回答带了 memory_id、所以 RAG 已正确 ⇒ 没犯（我没有编造引用）
+✅ 无答案查询返回模型常识 ⇒ 没犯（如实写未找到可用记忆）
+⭐ 摘要明确待审、源报告与候选一致、未声称发布 ⇒ 这条是正向判定：可以认可这项有限结论
+```
+
+## 结论（限定在已有材料）
+
+```
+✅ 可以认可：A 修好空结果丢结构（2/3 block ⇒ 3/3 pass）；B 修好四个报表没有 CSV 出口
+   （同样红了变绿）；B 的 Task 不同于 A 且基线如实标注；治理性质有机器证据
+🚩 不能声称：闭环完成（缺人审、采用决定、原反馈者复验）；
+   A 的经验被 B 采用（retrieved 是空，我如实写未找到可用记忆）；
+   业务效果确认；工作台首页已贯通同一链路
+⭐ 完成层次：个人脚本练习层已完成；工作台生产层未核对；人的决定层未完成
+```
+
+## 待办
+
+```
+[ ] ⭐ 读 SUBMISSION.md 模板、写 L15 的 SUBMISSION.md
+[ ] 🚩 待本人：A 与 B 的具名审核、MEM-L15-EXPORT-EMPTY-001 改 active、
     采用决定的决定人与理由、§10 原反馈者复验
 ```
