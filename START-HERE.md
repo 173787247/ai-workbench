@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:45 +0800
+> 最后更新：2026-10-16 03:46 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -4539,4 +4539,77 @@ tests/test_http_api.py:185  assertEqual(201, status)
 [ ] 新增 eval/cases.py 用例，注册到 harness.py:110 mods，先红后绿（用例要覆盖这八条，且用真 HTTP）
 [ ] §5 真实采购核对 ｜ §6 同伴复验与迁移
 [ ] 🚩 待本人定（七件）之第 0 件：两个最小入口落 8010 还是 8001
+```
+
+---
+
+# ⭐⭐⭐ L13 新增 Eval 用例：真 HTTP、有辨别力、已注册
+
+## 用例清单是硬编码的 —— 不注册就永远不跑
+
+```
+eval/harness.py（103 行），:11 from . import cases
+⭐ 一个元组列表：("case_name", "blocking", cases.case_name)
+⇒ 新增用例 = ① cases.py 写函数 ② harness.py 列表加一行
+  ⇒ ⚠️ 不注册 ⇒ 套件仍报 pass ⇒ 假绿（L11 学到的）
+  ⇒ ⚠️ 而且这个候选里那个列表不叫 mods —— 我按 L11 的记忆找 mods 找不到
+    ⇒ 记忆里的名字，不等于这个版本的名字
+```
+
+## 用例写了八条断言，全部走真 HTTP
+
+```
+① 202 + status=queued + status_url + view_url（受理不是完成）
+② 同键同内容 ⇒ 202 且同一个 id
+③ 同键异内容 ⇒ 409
+④ 凭编号 ⇒ 200 且同一个 id
+⑤ 视图 human_decision_recorded=False，next_action 在 {wait, human_review}
+⑥ 不存在 ⇒ 404
+⑦ 网页 execute_code ⇒ 400
+⑧ 缺 Idempotency-Key ⇒ 422
+⭐ 用例里写了「为什么用 http.client 而不是 dispatch()」的注释：
+   直接调用跳过状态行、连接与头部编码，看不到真实契约；
+   也正因走 HTTP，才能发现「操作者名只能是 latin-1」这类协议层约束
+```
+
+## 实测三项
+
+```
+① 跑新用例 ⇒ [PASS ] 632 ms，退出码 0
+② ⭐ 辨别力：临时移除最小权限拦截 ⇒
+   [BLOCK] AssertionError: 网页入口不得受理代码执行，实际 202
+   ⇒ {"total":1,"passed":0,"blocking_failed":1,"decision":"block"}，退出码 1
+   ⇒ 所以这个用例真的能发现那个缺口，不是摆设；已恢复并同案复验
+③ 恢复后 ⇒ [PASS ]，退出码 0
+⇒ 「先红后绿」这次是真的红过，不是「我写完它就是绿的」
+   ⇒ 变体报告 variant-no-permission.json 留着，退出码 1 留着
+```
+
+## 完整阻断回归
+
+```
+$ python -X utf8 -m eval.harness --suite blocking
+⇒ {"total": 21, "passed": 21, "blocking_failed": 0, "decision": "pass"}，退出码 0
+⇒ ⭐ 用例数从 20 变 21 ⇒ 我的用例真的被注册进去了，不是假绿
+单元测试 ⇒ 仍 FAILED (failures=7, errors=9)，与改动前逐条相同 ⇒ 没引入新失败
+改动范围 ⇒ eval/cases.py / eval/harness.py / workbench/platform_api.py /
+           workbench/project_store.py / workbench/task_store.py ⇒ 全在写集内
+```
+
+## 合同 acceptance 对照
+
+```
+① API 接受请求后返回 Task ID 而非伪称完成 ⇒ ✅ 202 + 两个 URL + queued + 视图不替人署名
+② 任务事件可追溯到需求、业务对象和 Eval ⇒ ⚠️ 任务行有 requirement_id/business_refs/spec_path；
+   但「事件」这条只验了 task_store 的 append_event 重放，没验到 Eval 那条链 ⇒ 待补
+③ 全绿后仍停在人工审核 ⇒ ✅ status=queued、next_action=wait、没有 completed
+```
+
+## 待办
+
+```
+[ ] 第 ② 条：任务事件到 Eval 的那条链没验（只验了重放事件）
+[ ] submit_key（加在 task_store）还没有调用方 ⇒ 与「落 8010 还是 8001」同一个问题
+[ ] §5 真实采购核对 ｜ §6 同伴复验与迁移 ｜ SUBMISSION.md
+[ ] 🚩 待本人定七件（第 0 件：两个最小入口落哪一侧）
 ```
