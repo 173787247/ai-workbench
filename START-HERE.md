@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:59 +0800
+> 最后更新：2026-10-16 04:00 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -5779,5 +5779,88 @@ app.js:193  Promise.all([products, customers, suppliers, sites])
 [ ] 读 5.3/5.4、第 1~3 步、第 4 步提示词、SUBMISSION 模板
 [ ] 写页面合同 ⇒ 实现 ⇒ 先红后绿 ⇒ 同版本复验 ⇒ 完整阻断回归
 [ ] ⚠️ 顺带记：warehouse_name 在列表里是 null（详情会显示空）
+[ ] 🚩 待本人定九件
+```
+
+---
+
+# ⭐⭐⭐⭐⭐ L14 缺陷复现成功：执行真函数，不是读代码
+
+## 方法上的关键差别
+
+```
+前几轮：我 grep purchaseActions，读它的源码，推断「它会在失败时也给按钮」
+这一轮：加载真的 app.js，造 state.purchaseStatus="failed"，
+        调用真的 purchaseActions(<真实的待审批单>)，拿它实际返回的 HTML
+⇒ 「读代码推断」与「执行函数看输出」是两种证据强度
+```
+
+## 做法（可复用）
+
+```javascript
+const sandbox = {
+  document: { querySelector: () => makeEl(), querySelectorAll: () => [], … },
+  sessionStorage / localStorage: { getItem, setItem, removeItem },
+  window: { addEventListener(){}, location: { hash: '' } },
+  fetch: () => Promise.reject(new Error('网络不可用（模拟断网）')),
+};
+const ctx = vm.createContext(sandbox);
+vm.runInContext(fs.readFileSync('web/app.js', 'utf8'), ctx, { filename: 'app.js' });
+vm.runInContext('typeof purchaseActions', ctx);   // ⇒ "function"
+vm.runInContext('state.purchaseStatus = "failed";', ctx);
+vm.runInContext(`purchaseActions(${JSON.stringify(pending)})`, ctx);   // ⇒ 真的 HTML
+```
+
+## 复现结果
+
+```
+待审批单：PO-20261016-00001，status = "pending_approval"，id = PUR-F41BB3510…
+purchaseStatus = "idle"    ⇒ 审批按钮 在 ｜ 驳回 在
+purchaseStatus = "loading" ⇒ 审批按钮 在 ｜ 驳回 在
+⭐ purchaseStatus = "failed" ⇒ 审批按钮 在 ｜ 驳回 在
+
+purchaseStatus="failed" 时返回的 HTML（原样）：
+<button class="button small primary" data-action="purchase-approve"
+        data-id="PUR-F41BB3510EF1454698B658D4C276AEA3">审批</button>
+<button class="button small" data-action="purchase-reject" …>驳回</button>
+⇒ 证明：state.purchaseStatus === "failed" 时，函数照样生成「审批」按钮
+  ⇒ 它完全不知道「最新状态未知」这件事
+    ⇒ 依据：函数体里只有 if(o.status==="draft") … else if(o.status==="pending_approval") …，
+      没有任何一处读 state.purchaseStatus —— 这一条既是读出来的，也是执行证实的
+```
+
+## 后果（接上页面其余部分）
+
+```
+⭐ setPurchaseStatus("failed")（:358）会清空两个表格 ⇒ 「列表里的按钮」被挡住了
+  ⇒ ⭐ 但 purchaseActions() 是渲染表格行用的函数，它本身不检查失败态
+    ⇒ 真正的漏洞在抽屉：
+      · openDetail(title, subtitle, html)（:456）只是在打开时重写 #drawer-content
+      · 没有任何「查询失败时把抽屉关掉或标记」的逻辑
+      · 而 :471 的采购详情里就包含 purchaseActions 生成的按钮
+        ⇒ 所以：断网前打开的那张待审批单，它的「审批」按钮在断网后仍在，
+          而且 :646 会直接发写请求
+          ⇒ 正是辅导资料那句：「断网后的旧卡片可以帮助林舟记住采购单编号，
+            却不应支持一次新的审批决定」
+```
+
+## 我自己的两处小错
+
+```
+⚠️ ① console.log 里用了 %-8s（Python 的格式，Node 不支持）⇒ 输出错位，改模板串
+⚠️ ② fetch 我替换成了 Promise.reject，但这次复现没走到 fetch
+   ⇒ 因为 purchaseActions 是纯渲染函数，它不发请求
+     ⇒ 要验「点了会不会发请求」，得再走一步：调 bindActions 后模拟点击，
+       或者直接看 :646 的分支 ⇒ 下一轮
+```
+
+## 待办
+
+```
+[ ] ⭐ 再走一步：证明「点了真的会发写请求」（调 :644-652 那个分支或模拟点击）
+    ⇒ 判据：fetch 被调用，且 URL 是 /approve
+[ ] 造「断网」后再观察（三条判据：结果区、同步提示、业务动作）
+[ ] 读 5.3/5.4、第 1~3 步、第 4 步提示词、SUBMISSION 模板
+[ ] 写页面合同 ⇒ 实现 ⇒ 先红后绿 ⇒ 同版本复验 ⇒ 完整阻断回归
 [ ] 🚩 待本人定九件
 ```
