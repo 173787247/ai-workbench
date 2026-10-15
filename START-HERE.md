@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:49 +0800
+> 最后更新：2026-10-16 04:51 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -8947,4 +8947,63 @@ assert all(Path(m.__file__).resolve().is_relative_to(root) for m in (eval.harnes
 [ ] ⭐ 定「需求实现在哪份候选」
 [ ] 读 SUBMISSION.md 模板、examples/skills/release-evidence-review
 [ ] 🚩 待本人：首页实际事项编号、原工作台运行目录、本人六段 Spec 路径、现场需求抽取、答辩、人审
+```
+
+---
+
+# 🎯 L16 实施方案确定：HTTP 层在 workbench/api_v2.py，不在 flowerp/
+
+## 四层在控制仓库里的实际位置
+
+| 辅导资料的四层 | 本候选里的实际位置 | 证据 |
+|---|---|---|
+| 业务查询 | flowerp/inventory.py（508 行） | list_balances(principal, site_id, product_id, low_stock_only) ⇒ 没有 keyword |
+| ⭐ HTTP 接口 | ⭐ workbench/api_v2.py | grep -rln 'api/v1/inventory' 命中它；flowerp/ 里没有这个串 |
+| 服务启动 | workbench/server.py | main.py:7 from workbench.server import serve |
+| 客户页面 | web/（app.js、index.html、styles.css、AGENTS.md） | app.js 调 /api/v1/inventory/balances |
+| ⚠️ 另一套页面 | harness_web/ | 那是工作台自己的页面，不是客户页 |
+
+⇒ 所以 L16 的四层是：flowerp/（业务）、workbench/api_v2.py+server.py（HTTP）、
+  web/（页面）、eval/+tests/（验收）
+  ⇒ 而合同 write_scope = flowerp/、workbench/、eval/、web/、tests/ 正好覆盖
+    ⇒ 所以实施就在控制候选里做，不需要独立 FlowERP 那套 flowerp/api.py
+      ⇒ 独立 FlowERP 是另一种组织方式（HTTP 放在业务包里）⇒ 两者不能混
+
+## E/F 区的机制
+
+```
+E 区：检查不含提前实现；报告、数据库、个人 Spec 不暂存
+      $l16CheckFiles = 检查相对文件 ⇒ 未指定则 throw
+      git commit -m "L16: freeze checks for live requirement"；git rev-parse HEAD
+F 区：先保存 E 区提交 SHA，再回控制实例；新增名称必须逐字出现在本人 Spec 验收段
+      rev-parse --verify ⇒ 非 0 ⇒ '检查提交不在控制 Git 库中'
+      merge-base --is-ancestor course/l16-start ⇒ 非 0 ⇒ '不满足祖先条件'
+      spec $l16Spec ⇒ 非 0 ⇒ '先修正本人 Spec'
+      $l16Actor = 实际构建者姓名（🚩 待本人）
+      $l16Scopes = 已确认的实现相对文件 ⇒ 空则 throw
+      course-submit --lesson 16 --execute-code --actor … --eval-case …
+        --session-baseline-ref $l16Baseline --execution-timeout 900 + 每个写集文件一个 --allowed-file
+```
+
+## 我初判的写集
+
+```
+⭐ 按辅导资料 §4：「先用需求判断修改位置，再确定文件写集」
+   「若本题只需要其中一层改动，就说明其他层已经怎样支持要求，保持最小范围」
+⇒ 初判四处：flowerp/inventory.py（加关键词查询）、workbench/api_v2.py（接参数、保留权限）、
+   web/app.js（把关键词发给 API，不再只过滤当前页数组）、web/index.html（可能已有搜索框，要核实）
+⇒ 而 eval/ 属于冻结检查，不在实现写集里
+```
+
+## 待办
+
+```
+[ ] ⭐ 核实 web/index.html 与 app.js 现在的库存查询长什么样（定最小写集）
+[ ] ⭐ 核实 workbench/api_v2.py 的 /api/v1/inventory/balances 路由
+[ ] ⭐ 读 G/H/I/J（独立 Eval、产品预览、测试/Loop/Graph、正式 Task 人审）
+[ ] ⭐ 读 K/L/M（独立恢复实验、结果导出与索引、合同最终入口与独立演示）
+[ ] 读 SUBMISSION.md 模板与 examples 四个文件
+[ ] ⭐ 写 L16 的六段 Spec 与新增 Eval，在控制候选里跑旧绿新红
+[ ] 🚩 待本人：首页实际事项编号、原工作台运行目录、本人六段 Spec 路径、实际构建者姓名、
+    已确认的实现写集、现场需求抽取、答辩、人审
 ```
