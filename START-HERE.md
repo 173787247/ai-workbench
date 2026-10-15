@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:28 +0800
+> 最后更新：2026-10-16 03:29 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -3641,4 +3641,53 @@ approved 0 ｜ unapproved 0 ｜ blank-reviewer 0 ｜ rejected 0 ｜ replay 0 ｜
 
 ```
 ⚠️ **PPT**（**L12 的 29 页**）✗ **`reference/参考说明.md`** ✗ **`assets/README.md`**
+```
+
+
+---
+
+# ⭐⭐⭐ L12 补上 `empty-report` 缺口
+
+```
+`graph_control_lab.py empty-report` ⇒ **`status = awaiting_human_review`** ⚠️
+⇒ ⭐ **空报告竟然进了人工决策点**（**与 L10 的 `converged` 是同一个洞 ✗ 换了位置**）
+⇒ Skill：「**零阻断数或空结果不能单独支持审核。**」
+⇒ ⚠️ **我的实现原来也漏了**（**`blocking_failed` 为 0 ⇒ 进人审** ✓）
+```
+
+## ✅ 修法（三行判断）
+
+```python
+results = state.report.get("results") if isinstance(state.report, dict) else None
+if not isinstance(results, list) or not results:
+    state.run_error = ("报告没有可核验的用例结果，零阻断数不能单独支持审核"
+                       f"（results={results!r}）")
+    state.move("failed", "报告无效：空结果不能进入人工决策点")
+    continue
+```
+
+## ⭐⭐ 实测两条 ✗ 回归
+
+```
+空 results  ⇒ `status = **failed**` ✗ `run_error` 写明 ✓ ✗ trace「报告无效」✓
+             ⭐ **没进人审 ✗ 没进 completed** ✓
+正常报告    ⇒ `awaiting_human_review` ✗ `check_count=1` ⇒ ⭐ **没误伤正常路径** ✓
+回归：`--suite blocking` ⇒ **20/20 pass** ✗ 退出码 0 ✓
+```
+
+## ⭐⭐⭐ 三处「参考演示缺口 ✗ 我显式拒绝」的对照
+
+| 场景 | **参考程序** | **我的实现** |
+|---|---|---|
+| **空报告** | ⚠️ `awaiting_human_review` | ⭐ **`failed`** + 原因 |
+| **旧候选批准** | ⚠️ `completed`（`judgment` 承认"无候选绑定"） | ⭐ **`develop`** + `rejected_stale_candidate` |
+| **未校验的转移** | ⚠️ `completed` | ⭐ **`ValueError`：不允许的边** |
+
+⇒ ⭐⭐⭐ **同一个模式：参考演示缺口 ✗ 我用显式拒绝堵上** ✓
+   ⇒ ⭐ **这正是"个人实现"与"参考程序"的差别** ✓
+
+## 仍待读
+
+```
+⚠️ **PPT（29 页）** ✗ **`reference/参考说明.md`** ✗ **`assets/README.md`**
 ```
