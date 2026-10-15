@@ -7830,3 +7830,61 @@ inventory（两个商品各入库）⇒ 3 行：
 [ ] 🚩 待本人：真实 L14 Task ID、Spec 的「本人确认版」、--actor 真实姓名、
     TASK-AD82BFE14C 的具名审核（停在 review）
 ```
+
+---
+
+# ⭐⭐⭐⭐⭐ L15 §7：记忆集格式与实验室脚本读全
+
+## §7 要我做什么
+
+```
+⭐ 从事项 A 已修复并审核的结果中提炼一条可复用经验：为什么成立、什么条件下能沿用、
+   换一个业务对象需要重新确认什么
+⭐ 你提供事实与决定，让 Codex 按格式整理自己的 JSON，保存在个人练习目录
+⭐ 先保存为 candidate；责任人检查来源、边界和隐私后写入真实姓名与时间，再改为 active
+   未审核的候选保持原状态；撤回时保留条目与理由，修订时保留旧版本
+⭐ 逐项检查：memory_id 与 version 是本人的；source.task_id 指向第 5 步的真实修复 Task，
+   而非原 L14 Task；证据路径能打开、指纹对应实际文件、适用与不适用条件都已写清
+⭐ 继续条件：已有个人文件绝对路径与审核记录。教学脚本不会认证审核者、核验源文件
+   或自动登记到生产工作台；这些来源由你核对
+⇒ 所以 reviewed_by 必须本人填，我不代签
+```
+
+## 格式 codexfde.l15.memory-fixture/v1
+
+```
+顶层三键：schema / memories / queries
+memories 每条十个键：memory_id、version、project、status、title、content、
+                    applies_when、not_when、tags、source
+  ⚠️ 是 content 不是 conclusion；是 not_when 不是 not_applies_when
+queries 每条四个键：query_id、project、query、relevant
+```
+
+## memory_rag_lab.py 的接口
+
+```
+--fixture / --query / --project（默认 FlowERP）/ --top-k（默认 2）
+--include-revoked（默认关，这就是「撤回默认排除」的落点）
+--evaluate（用 queries 的 relevant 打分）
+--out；退出码 0 if passed else 1
+⇒ 它自己就实现了两条治理性质：revoked 不进默认检索；只算分数，不写任何「采用」
+```
+
+## 样例里那个 revoked 的用意
+
+```
+MEM-EXPORT-OLD，status: revoked，title「空库存导出应该直接报错」，
+not_when「与有效空表合同冲突」
+⇒ 它是反例，演示「撤回的默认排除」：一条曾经可能被采用的建议后来发现是错的，撤回
+  ⇒ fixture 里留着它，正是为了让 lab 能证明它不会出现在默认结果里
+```
+
+## 待办
+
+```
+[ ] ⭐ 写自己的 fixture：memories 至少一条（从 TASK-AD82BFE14C 提炼），
+    source.task_id = TASK-AD82BFE14C，evidence_refs 指向真证据；queries 至少两条
+[ ] ⭐ 跑 memory_rag_lab.py --evaluate，留原始输出与退出码
+[ ] ⭐ §8 换一个事项查询 ⇒ §9 用上下文但不替人采用 ⇒ §10 回收效果
+[ ] 🚩 待本人：reviewed_by 的真实姓名（脚本不认证，我不代签）
+```
