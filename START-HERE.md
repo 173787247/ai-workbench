@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:20 +0800
+> 最后更新：2026-10-16 04:21 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -6550,5 +6550,85 @@ def to_csv(rows):
 [ ] 读 实践操作手册.md 第 1~10 步
 [ ] 读 SUBMISSION.md 模板与 reference/个人记忆集格式.md
 [ ] ⭐ 建 L15 候选（--source working-tree）⇒ 真调用各导出路径，看空结果的实际字节
+[ ] 🚩 待本人：真实 L14 Task ID
+```
+
+---
+
+# ⭐⭐⭐⭐⭐ L15 事项 A：缺陷真复现（空库 + 真 HTTP + 原始字节）
+
+## 先证明「空」是合法的
+
+```
+GET /api/v1/products?limit=5   ⇒ 200, items=0
+GET /api/v1/customers?limit=5  ⇒ 200, items=0
+GET /api/v1/suppliers?limit=5  ⇒ 200, items=0
+⚠️ GET /api/v1/inventory        ⇒ 404（这个仓库没有那条列表路由，但导出路由在）
+⇒ 三个查询都成功、结果确实为空 ⇒ 这是「合法空结果」，不是权限错或查询错
+  ⇒ 与辅导资料那个四分法里选定了同一支：「查询确实没有记录」
+```
+
+## 逐个导出，记录实际字节数
+
+| 导出 | HTTP | 字节数 | 首行 | 判定 |
+|---|---|---|---|---|
+| inventory | 200 | 61 | sku,name,site,location,lot_id,on_hand,reserved,available | ✅ 有表头 |
+| products | 200 | 117 | sku,name,barcode,tracking,sales_price_cents,… | ✅ 有表头 |
+| customers | 200 | 101 | code,name,contact_name,phone,email,shipping_address,… | ✅ 有表头 |
+| ⚠️ suppliers | 200 | ⚠️ 0 | ⚠️ '' | ❌ 空文件，合法空结果丢失了文件结构 |
+
+⇒ 四个导出类型里只有 suppliers 没修
+  ⇒ 另外三个都已硬编码列名（import_export.py:251/255/259）
+    ⇒ suppliers 走 elif rows: ⇒ 空 ⇒ 落到 else: return "" ⇒ 返回空字符串 ⇒ 0 字节文件
+
+## 第二个实例：ReportService.to_csv([])
+
+```
+ReportService.to_csv([]) ⇒ ''（0 字节）
+⇒ 同一个缺陷类，而它在所有报表导出的公共出口上
+  ⇒ 源码 flowerp/reports.py:193 if not rows: return ""
+  ⇒ 它甚至更干净：显式 return ""，一眼就是丢结构
+```
+
+## 为什么这个题目正好合手册的要求
+
+```
+⭐ 辅导资料的判断题：「如果你当前的空 CSV 已有正确列名，还能把它作为新修复吗？不能。」
+⇒ 我的情形：inventory 已有正确列名 ⇒ 只能当回归项
+           suppliers 与 reports.to_csv 确实没有 ⇒ 这才是实际未解决的问题
+  ⇒ 而且它可迁移：手册案例是「库存修好 ⇒ 借到销售导出」，
+    我是「库存/客户/商品已修 ⇒ 供应商与报表还没」
+    ⇒ 同构，而且我核实了它真的还没修，不是照抄案例
+```
+
+## 三个必须守的条件（要写进 Spec）
+
+```
+① 有数据时仍正确输出 ⇒ suppliers 有数据时仍要按九列输出
+   ⇒ 依据 import_export.py:245 的 SELECT 列：
+     code,name,contact_name,phone,email,address,payment_terms_days,lead_time_days,status
+     ⇒ 而这九列没有硬编码在代码里 ⇒ 修时要按规格列出，不能靠 rows[0]
+② 无权查询时明确拒绝 ⇒ 不能把权限失败包装成「空文件」
+   ⇒ 所以分别验：空库 ⇒ 200 + 表头 ｜ 无权限 ⇒ 4xx
+③ 导出前后库存与账本不变 ⇒ 导出是只读的 ⇒ 前后各查一次证明没写
+```
+
+## 我这一轮的一个错
+
+```
+⚠️ 我先写了 app.imports ⇒ AttributeError: 'App' object has no attribute 'imports'
+⇒ 我猜了属性名，没先查
+  ⇒ 改走真 HTTP（不依赖内部属性名，而且证据更强）
+  ⇒ 同族错误第七次：「我以为我知道名字」⇒ 下次先 dir() 或先找入口，不猜
+```
+
+## 待办
+
+```
+[ ] 读 §2/§4/§5/§6、手册第 1~10 步、SUBMISSION 模板、reference/个人记忆集格式.md
+[ ] ⭐ 建 L15 候选（course-prepare --lesson 15 --source working-tree）
+[ ] ⭐ 写 Spec（三条件 + 九列规格 + 回归项 inventory）⇒ 从规格形成 Eval
+[ ] 修 suppliers 与 reports.to_csv（先红后绿、辨别力）
+[ ] 事项 B：检索这条经验、决定采用、交付、回收效果
 [ ] 🚩 待本人：真实 L14 Task ID
 ```
