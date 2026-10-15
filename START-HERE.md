@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:56 +0800
+> 最后更新：2026-10-16 03:57 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -5565,5 +5565,95 @@ flowerp/__main__.py：from .server import serve；--host/--port/--runtime-dir，
 [ ] 找审批动作的入口（openDrawer、表格里的按钮），看失败时是否停用
 [ ] ⭐ 起 18115、真发请求、复现（要真的走 HTTP）
 [ ] 读 5.3/5.4、第 1~3 步、第 4 步提示词、SUBMISSION 模板
+[ ] 🚩 待本人定九件
+```
+
+---
+
+# ⭐⭐⭐⭐⭐ L14 缺口完全定位：旧抽屉上的「审批」按钮在断网后仍能点
+
+## 我又犯了一次同族错（第六次）
+
+```
+⚠️ 我上一轮用 page 拼变量名：purchases + Request = purchasesRequest
+   ⇒ 而代码里是 purchaseRequest（少一个 s）
+   ⇒ 所以那一轮显示「purchases 0 处」是我的正则错
+⇒ 这一轮改成直接列出所有 *Request 标识符 ⇒ 真相：
+   inventoryRequest 13 处、purchaseRequest 13 处
+⇒ 教训：要统计「有没有某类标识符」时，先列出实际的，再筛
+   ⇒ 用生成的名字去匹配，名字拼法一错，结论就反了
+```
+
+## 序号机制的实际覆盖
+
+```
+✅ inventoryRequest（13 处）｜ ✅ purchaseRequest（13 处）
+⚠️ dashboard / channels / sales / products / partners / finance 都没有
+⇒ 而本讲的问题是「采购页」，采购页有序号 ⇒ 缺口不在序号机制上，这一条排除了
+```
+
+## 真正的缺口：purchaseActions(o) 只看行状态
+
+```javascript
+:350 function purchaseActions(o) {
+:352   if(o.status==="draft")            ⇒ 编辑 / 提交审批 / 取消
+:353   else if(o.status==="pending_approval") ⇒ 审批（purchase-approve）/ 驳回
+:354   else if(["approved","partially_received"]…) ⇒ 创建收货
+:355   else if(o.status==="received")   ⇒ 登记应付
+:357 }
+⇒ 这个函数只读 o.status，完全不读 state.purchaseStatus
+  ⇒ setPurchaseStatus("failed") 把两个表格清空了 ⇒ 表格那条路被挡住
+    ⇒ 但 openDetail（:456）不会被清：
+       :457-458 $("#drawer-content").innerHTML=html; $("#drawer").classList.remove("hidden")
+       ⇒ 它只在打开新详情时被重写，没有「查询失败时关掉抽屉或停用其中按钮」的逻辑
+```
+
+## purchase-approve 的动作处理不检查最新状态
+
+```javascript
+:646 else if(action==="purchase-approve"){
+       const decision=await askConfirmation({title:"审批采购单",
+         message:"审批后将生成采购在途库存，并允许仓库收货。",confirmLabel:"同意采购"});
+       if(!decision.confirmed)return;
+       await write("/api/v1/purchases/orders/"+id+"/approve",{});}
+⇒ 它直接发写请求，不看 state.purchaseStatus、不看 lastSuccessAt
+  ⇒ 这就是本讲的缺陷核心：断网前打开的那张待审批采购单，其「审批」按钮在断网后仍然可点，
+    点了就真的发写请求 ⇒ 可能诱导一次错误审批
+  ⇒ 而辅导资料正是这么说的：「断网后的旧卡片可以帮助林舟记住采购单编号，
+    却不应支持一次新的审批决定」
+```
+
+## 三项对照
+
+| 要核对的条件 | 候选现状 |
+|---|---|
+| 原对象仍是当前对象 | ⚠️ 抽屉内容常驻，没有「失败时关闭或标记」 |
+| 原请求仍是当前查询 | ✅ purchaseRequest 有序号，表格路径守住了 |
+| 响应符合服务合同 | ⚠️ 没看到合同校验（api() 只 JSON.parse） |
+| ⭐ 限制需要最新状态的业务动作 | ❌ 完全没有 |
+
+⇒ 本讲要补的是第四项，而不是重做前三项
+
+## 我的修复方向（先写，再动手）
+
+```
+① 让「最新状态未知」成为一个页面级事实：记 state.purchaseStatus==="failed"，
+   并带「最近一次成功查询的时间」
+② 让 purchaseActions(o) 在「最新状态未知」时不给出需要最新状态的按钮
+   ⇒ ⚠️ 但不能只靠前端隐藏：辅导资料明说「把按钮隐藏或置灰是交互帮助，
+     不能替代后端权限和状态校验」
+     ⇒ 而服务端本来就有状态机 ⇒ 所以真正要防的是「在错误的状态认知下发出一次本来合法的审批」
+       ⇒ 那只能靠让用户看到「最新状态未知」，并要求重新查询
+③ 断网时保留对象身份（采购单号、上次状态、时间），但不支持新决定
+④ 恢复后重新查同一单，用服务端数据重新核对
+```
+
+## 待办
+
+```
+[ ] ⭐ 起 18115、真发请求、复现（要真的走 HTTP，不能只读代码）
+    ⇒ 而且「断网」要真的造出来（停掉服务，或指向一个不通的端口）
+[ ] 读 5.3/5.4、第 1~3 步、第 4 步提示词、SUBMISSION 模板
+[ ] 写页面合同（第 4 步的「观察与定义」）⇒ 实现 ⇒ 先红后绿
 [ ] 🚩 待本人定九件
 ```
