@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:20 +0800
+> 最后更新：2026-10-16 03:21 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -3273,4 +3273,74 @@ business: flowerp.service ✅ ｜ flowerp.store ✅
 [ ] §5 Graph 与业务对账（**含修 R3：同键异对象** ✓）
 [ ] §6 同伴 ✗ 迁移与流程版本
 [ ] 🚩 **两位具名的人**：软件审核人 ✗ 采购负责人 ⇒ **待本人**
+```
+
+
+---
+
+# ⭐⭐⭐ L12 业务修复完成：**批准后入库 + 同键异对象**
+
+## 改了什么（`flowerp/service.py` 一处 ✗ 两个缺口）
+
+```diff
+     ApprovalRequired,
++    Conflict,
+@@ -344,11 +345,19 @@
+-        if False and item["status"] != PurchaseStatus.APPROVED:
++        if item["status"] not in {PurchaseStatus.APPROVED, PurchaseStatus.RECEIVED}:
+             raise ApprovalRequired(f"采购 {request_id} 未审批，不允许入库")
++        claimed = self.store.row(
++            "SELECT reference FROM inventory_events WHERE event_key=?", (event_key,))
++        if claimed is not None and claimed["reference"] != request_id:
++            raise Conflict(
++                f"入库键 {event_key} 已属于 {claimed['reference']}，不能被 {request_id} 复用")
+         result = self.receive_stock(...)
+```
+
+## ⭐ 三处取舍
+
+```
+① ⭐ **`not in {APPROVED, RECEIVED}` 而不照抄 HEAD 的 `!= APPROVED`**
+   ⇒ ⚠️ **函数开头对 `RECEIVED` 有单独分支（`:338`）处理"重试"** ✗
+     **重试时状态已经是 `RECEIVED`** ⇒ **照抄 `!= APPROVED` 会把重试挡死** ✓
+   ⇒ ⭐⭐ **守卫必须与已有的状态机分支相容 ✗ 不是"多此一举"** ✓
+② ⭐ **新检查放在 `receive_stock` **之前****
+   ⇒ **否则先入库再发现键不对 ⇒ 部分写入** ✓（**Spec 验收 ① 要求无部分写入** ✓）
+③ ⭐ **用 `Conflict`**（`models.py:33`）⇒ **"同一个键被两张申请抢"是键冲突 ✗
+   不是参数错 ✗ 也不是状态迁移错** ✓
+```
+
+## ⭐⭐⭐ 实测四条（**全对** ✓）
+
+```
+两用例：退出码 **0** ✗ `{"total":2,"passed":2,"blocking_failed":0,"decision":"pass"}` ✓
+  （**改前**：`[BLOCK] purchase_requires_approval`「AssertionError: 未审批采购被入库」）
+手工复现：
+  ① PR-1 审批后入库 ⇒ `on_hand` 10→**15** ✓
+  ② ⭐ PR-2 复用 `rcpt:shared` ⇒ ✅ **`Conflict: 入库键 rcpt:shared 已属于 PR-1 ✗
+     不能被 PR-2 复用`** ✓
+  ③ ⭐ PR-2 状态 ⇒ ✅ **`approved`**（**不是 `received`** ✓）
+  ④ ⭐ `on_hand` ⇒ ✅ **仍 15** ✓
+  ⑤ PR-1 同键重试（**同一张申请**）⇒ ✅ **`received` ✗ `on_hand` 不变** ✓
+  ⑥ 未审批的 PR-3 ⇒ ✅ **`ApprovalRequired` ✗ 仍 `proposed`** ✓
+⇒ ⭐ **L11 记录的 R3 从缺陷变成了被拒绝** ✓
+```
+
+## ⭐ `store.row` 的语义（**先看实现 ✗ 不猜** ✓）
+
+```
+`flowerp/store.py:148`：`return dict(value) if value else None`
+⇒ ✅ **找不到返回 `None`** ⇒ **我的 `claimed is not None` 是对的** ✓
+⇒ ⚠️ **L09 我在 `connect()` 上猜过 schema ✗ 报 `no column named id`** ⇒ **这次没重犯** ✓
+```
+
+## ⚠️ 仍未改的
+
+```
+[ ] ⚠️ **`agent/graph.py` 四处缺口**：① ⭐⭐ **`develop` 没连接受控执行**（**只有标签** ✓）
+    ② **打回没形成新候选**（**`state.report` 没清** ✓）③ **三类异常没分开** ✓
+    ④ ⚠️ **`_save_state` 在 `except` 之后 ⇒ 保存抛异常就没留痕** ✓
+[ ] ⚠️ **`receive_stock` 自己的键判定仍只看键**（**`receive_purchase` 这层挡住了 ✗
+    但直接调它的路径没有**）⇒ **记录** ✓
+[ ] §4 真实等待与人审 ｜ §5 Graph 部分 ｜ §6 同伴/迁移/流程版本
 ```
