@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:57 +0800
+> 最后更新：2026-10-16 03:58 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -5655,5 +5655,66 @@ flowerp/__main__.py：from .server import serve；--host/--port/--runtime-dir，
     ⇒ 而且「断网」要真的造出来（停掉服务，或指向一个不通的端口）
 [ ] 读 5.3/5.4、第 1~3 步、第 4 步提示词、SUBMISSION 模板
 [ ] 写页面合同（第 4 步的「观察与定义」）⇒ 实现 ⇒ 先红后绿
+[ ] 🚩 待本人定九件
+```
+
+---
+
+# ⭐⭐ L14：真起客户候选服务（18115），播种时发现两套采购模型
+
+## 服务起来了
+
+```
+$ python -X utf8 -m flowerp serve --host 127.0.0.1 --port 18115 --runtime-dir /tmp/l14-run/rt
+⇒ PID 707158；日志：{"event":"server_started","url":"http://127.0.0.1:18115",
+   "instance_id":"grandocean:707160:117ddb0ad819","fencing_token":1}
+⇒ flowerp.db 建出来了（1.1 MB），但它是空的（不自带数据）
+
+GET /                    ⇒ HTTP 200（HTML 页面）
+GET /api/v1/health       ⇒ 404「接口不存在」⇒ 这个仓库没有那条，与工作台不同
+GET /api/v1/setup/status ⇒ 200 {"initialized": false, "authentication_required": false,
+                               "business_date": "2026-10-16"}
+GET /api/v1/auth/me      ⇒ 200 {"id":"system", …, "username":"system", "display_name":"系统"}
+⇒ authentication_required: false ⇒ 免登录，当前身份是 system
+  ⇒ 所以本讲「具名的人」这条在本地演示环境里是缺的，如实记
+```
+
+## 播种时发现两套采购模型并存
+
+```
+⭐ ERPService 只有这些采购方法（查了，不是猜）：
+   approve_purchase / list_purchases / propose_purchase / purchase / receive_purchase / reject_purchase
+   ⇒ 这是 L12/L13 用的那套简单采购（PR-xxx、proposed/approved/received）
+⭐ 而真 API 用的是另一个服务（flowerp/api.py）：
+   :378 if path == "/api/v1/purchases/orders" and method == "GET":
+        return APIResponse(200, {"items": self.purchasing.list_orders(principal, …)})
+   :379-381 POST /api/v1/purchases/orders 与 startswith("/api/v1/purchases/orders/")
+   ⇒ self.purchasing 是 PurchasingService（flowerp/purchasing.py）
+     ⇒ 它与 ERPService 是两套，而 web/app.js 调的是它那套
+⇒ 所以 ERPService.list_purchases() 返回 0 张，不是「库里没有」，而是「查错了模型」
+  ⇒ 教训（与 AGENTS.md 第一条同族）：不能因为某个服务的方法返回空就说没有数据，
+    要先确认这个服务是不是页面用的那个
+
+另一处：load_ecommerce_sample(svc) 只给了客户与供应商，商品 0 个
+```
+
+## 真 API 的采购路由（从 app.js 读出来的子动作）
+
+```
+/api/v1/purchases/orders                GET 列表 ｜ POST 建单
+/api/v1/purchases/orders/<id>/…         子动作：submit / approve / reject / cancel / 收货 / 发票
+```
+
+## 待办
+
+```
+[ ] ⭐ 用 HTTP API 建商品、供应商、建采购单、提交审批 ⇒ 得到一张 pending_approval
+    ⇒ 要求：走真 HTTP，不用服务对象直连
+[ ] ⭐ 复现缺陷：HTTP 拿到采购页数据（模拟页面已加载、有那张待审批单）；
+    造「断网」（停服务或改用不通的端口）；
+    观察那张单的「审批」按钮还能不能点、点了会发生什么
+    ⇒ 判据要「观测量」：结果区、同步提示、业务动作
+[ ] 读 5.3/5.4、第 1~3 步、第 4 步提示词、SUBMISSION 模板
+[ ] 写页面合同 ⇒ 实现 ⇒ 先红后绿 ⇒ 同版本复验 ⇒ 完整阻断回归
 [ ] 🚩 待本人定九件
 ```
