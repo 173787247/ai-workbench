@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:55 +0800
+> 最后更新：2026-10-16 03:56 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -5422,4 +5422,76 @@ $ python -X utf8 -m workbench.cli task-show <本次实际 Task ID> --runtime-dir
 [ ] 读第 1~3 步与第 4 步的两个提示词；读 SUBMISSION 模板
 [ ] ⭐ 真起客户候选服务、真发请求，复现「断网后旧卡片仍可点」
 [ ] 🚩 待本人定八件（本讲新增：无真实 Task ID ⇒ 交付包位置待本人）
+```
+
+---
+
+# ⭐⭐⭐⭐⭐ L14：两种候选的差别（我第一把就建错了，而手册说那种「应停止」）
+
+## 第一把建的正是手册说「应当停止」的那种
+
+```
+course-prepare --lesson 14（默认 --source baseline）
+⇒ 三个必需文件：flowerp/__main__.py 不存在；flowerp/server.py 不存在；web/index.html 有
+⇒ ⭐ 手册 §5.2 原文：「当前独立 FlowERP 的入口是 flowerp.__main__；旧课程组合候选
+   缺少此入口时应停止，先核对本题的候选版本与真实启动方式」
+   ⇒ 所以按手册，我必须停止，不能拿它当客户候选改
+```
+
+## 为什么它是「旧课程组合候选」
+
+```
+⭐ 它是控制仓库的一个 worktree（.git 是文件不是目录）
+   gitdir: /home/rchua/GO/CodexFDE/.git/worktrees/TASK-PREP-L14-2ca1ffcd…
+⭐ course_workspace.prepare() 只做 git worktree add --detach <target> refs/tags/<ref>
+   ⇒ 组合的是控制仓库基线的内容，不是独立 FlowERP
+⚠️ 顶层同时有 flowerp/ web/ workbench/ agent/ eval/ course/ ⇒ 两个仓库拼在一起
+⚠️ 而 flowerp/service.py 与控制仓库里的旧副本一致，与独立仓库不一致
+   ⇒ 这解释了它为什么没有 __main__.py
+```
+
+## 正解：--source working-tree
+
+```
+course-prepare --lesson 14 --source working-tree ⇒ 退出码 0
+⇒ 三个必需文件都在：flowerp/__main__.py(22 行)、flowerp/server.py(214 行)、web/index.html(222 行)
+⇒ flowerp/service.py 与独立仓库 flowERP-customer 一致
+⇒ 而且写了来源元数据 .course/product-source.json：
+   {"root": "/home/rchua/GO/flowERP-customer", "manifest": {"flowerp/reports.py": "f0ecbb73…"}}
+   ⇒ 正是 L13 手册那句：「course-prepare --source working-tree 的当前源快照才组合独立 FlowERP
+     并写 .course/product-source.json」
+
+判据一句话：缺 flowerp/__main__.py ⇒ 旧课程组合候选（应停止）；
+            有 flowerp/__main__.py ⇒ 组合了独立 FlowERP（可启动、可用于客户页复验）
+```
+
+## 客户候选的入口与端口
+
+```
+flowerp/__main__.py：from .server import serve；--host/--port/--runtime-dir，port 默认 8000
+⇒ 启动：python -m flowerp serve --host 127.0.0.1 --port 18115 --runtime-dir <新目录>
+  ⇒ 18115 是手册 §5.1 指定的客户行为复验端口，不是服务默认的 8000
+```
+
+## 但还差一层：手册的「客户候选」与 course-prepare 的 worktree 不是一回事
+
+```
+手册 §5.1 定义：客户候选 =「含客户业务源码、由本次 Task 修改客户页面的实际隔离目录」
+⇒ 「由本次 Task 修改」⇒ 它的位置要从交付事件里取
+  ⇒ task-show <TaskID> ⇒ events 里的「日常研发交付包已保存」⇒ 取 evidence.workspace
+⇒ 🚩 而我没有真实 Task ID ⇒ 取不到真实交付包
+  ⇒ 手册明说：「不能任选目录补成新候选」
+⇒ ✅ 我的做法（必须写明）：
+   · 用 --source working-tree 的候选作为「可运行的客户侧代码副本」
+   · 但「不声称」它是本次 Task 的交付包
+   · 并标注：真实交付包位置 = 待本人提供 Task ID 后由 task-show 取
+```
+
+## 待办
+
+```
+[ ] ⭐ 起 18115 的客户候选服务，真发请求，复现「断网后旧卡片仍可点」
+[ ] 读 5.3/5.4（工作台候选预览 18116；同一客户候选完成采购复验）
+[ ] 读第 1~3 步与第 4 步的两个提示词；读 SUBMISSION 模板
+[ ] 🚩 待本人定九件（本讲新增：真实 Task ID ⇒ 交付包位置）
 ```
