@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:07 +0800
+> 最后更新：2026-10-16 03:08 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -2591,3 +2591,65 @@ blank-reason / duplicate-id / negative / unknown-sku / zero ⇒ before==after �
 ```
 **首页实际事项编号**（**现用默认 `TASK-PREP-L11-7d24f4…`** ✓）
 + **L10 的 `task-review`**（**具名接受 ✗ 我不代签** ✓）
+
+
+---
+
+# ⭐ L11 建 `agent/schedule.py` ✗ `write_sets_reject_conflict`
+
+## 我写的实现（**自己写 ✗ 参考只核边界**）
+
+```
+`Subtask(name, write_set, read_set, resource_set, input_version)` ✗ `__post_init__` 拒绝空名
+`_scope` ⇒ 拒绝空/绝对/`..`/`:*?[]` ✗ **`casefold()` 折叠**
+`_overlap` ⇒ 相等 / `.` / **双向前缀**
+`_resource` ⇒ 非空 / 不含空白 / 折叠
+`conflict_pairs` ⇒ **无序对只报一次**
+`assert_parallel_safe` ⇒ **先校验同一 `input_version`** ✗ 冲突抛 `ValueError` ✗ 返回带 `boundary`
+⭐ **我加的两条参考里没有的**：
+  ① **校验"同一批必须依据同一份输入版本"**（**辅导资料：写"V1"不代表实际代码相同** ✓）
+  ② **`boundary` 跟着返回值走**（**"这次允许不能作为真正执行的依据"** ✓）
+```
+
+## ⭐⭐ 与课程 lab 的十种判断**逐个一致**（**10/10** ✓）
+
+```
+independent allowed ｜ same-write rejected ｜ read-write rejected ｜ directory rejected
+path-alias rejected ｜ shared-report rejected ｜ ⭐ undeclared-read **allowed**
+read-only allowed ｜ invalid-path rejected ｜ duplicate-name rejected
+```
+
+## ⭐ `write_sets_reject_conflict`（**四条断言 ✗ 该拒的拒 ✗ 该放的放**）
+
+```
+① 写集相同 ⇒ 拒绝 ✗ 且指出冲突范围 ｜ ② 一方改实现/另一方读它 ⇒ 拒绝（**W_A ∩ R_B**）
+③ 共用运行资源 ⇒ 拒绝 ｜ ④ ⭐ **真独立的两支 ⇒ 必须放行** ✗ 并检查 `input_version` 一致
+⇒ ⭐ **只做 ①②③ 的话 ✗ 一个恒定拒绝的实现也能通过** ⇒ ⭐ **Skill 点名的那个反例** ✓
+跑：退出码 **0** ✗ `[PASS] **写集冲突被拒、读写依赖被拒、共享资源被拒；真独立的两支放行**`
+```
+
+## ⭐⭐ 辨别力验证（**三变体都红** ✓）
+
+```
+① `ignore-read`（**删掉 W∩R —— 正是本讲要防的假独立**）⇒ 退出码 1 ✅
+② `ignore-resource` ⇒ 退出码 1 ✅ ｜ ③ `refuse-all`（**恒定拒绝**）⇒ 退出码 1 ✅
+```
+
+## ⚠️⚠️ 一处我**当场没发现**的错误
+
+```
+⚠️ 变体脚本顺手比的"十种场景"三个都报 "不一致: 无" ✗ **而 `ignore-read` 本该在
+   `read-write` 上判错** ⇒ ⭐ **和我预期矛盾 ✗ 该追** ✓
+⇒ 真因：**另起子进程读到了 `agent/__pycache__/*.pyc` 的旧字节码** ✓
+⇒ ✅ 同进程 + `-B` + 清缓存重验：`read-write 我=allowed / lab=rejected` ⚠️ **不一致** ✓
+   ⇒ ⭐ **与用例的 FAILED 一致 ⇒ 变体确实被抓住了** ✓
+⇒ ⭐ **教训**：**改完模块再另起子进程验证 ⇒ 会被 `__pycache__` 骗** ✓
+```
+
+## 下一步
+
+```
+[ ] **§4.3 两份子任务合同**（**甲补测试 ✗ 乙只读查风险 ✗ 带 `input_version`**）
+[ ] **§5 真实并行** ⇒ ⭐ **`subagent` 平替 Codex 原生 Subagents**
+[ ] **§6 串行整合 ✗ 同版复验**（**命令已在 `08-selected.json` 跑过** ✓）⇒ **§7 复盘**
+```
