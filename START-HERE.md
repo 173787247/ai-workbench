@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:23 +0800
+> 最后更新：2026-10-16 04:24 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -6792,4 +6792,96 @@ eval/progression.py:78 def require_capability(capability, *, root=None)
 [ ] §5.3 冻结成 commit ⇒ 回控制仓库提交任务 ⇒ §6 核对产品结果
 [ ] §7~§10：Memory 登记、换事项查询、不替人采用、回收效果
 [ ] 🚩 待本人：真实 L14 Task ID
+```
+
+---
+
+# ⭐⭐⭐⭐⭐ L15：require_capability 机制与起点红查清了
+
+## require_capability 的完整机制
+
+```python
+# eval/progression.py
+def load_enabled_capabilities(root=None):
+    path = (root or REPO_ROOT) / "course" / "baselines" / "PROGRESSION.json"
+    if not path.is_file(): return None          # 文件不在 ⇒ None
+    return {str(i) for i in (json.loads(path.read_text()) .get("enabled") or [])}
+
+def require_capability(capability, *, root=None):
+    enabled = load_enabled_capabilities(root)
+    if enabled is None: return                  # None ⇒ 直接返回，不拦
+    if capability not in enabled:
+        raise AssertionError(f"课程能力尚未交付（progression）：{capability}")
+⇒ 门闩只在 PROGRESSION.json 存在时起作用：它是「已交付能力」的白名单
+```
+
+## 被删的 PROGRESSION.json（git diff HEAD 的原始输出）
+
+```json
+{ "schema_version": "1.0", "lesson_start": 15,
+  "enabled": ["inventory_export","receiving_idempotent","stock_non_negative","order_total",
+    "sales_atomic","cancel_release","illegal_transition","purchase_request",
+    "purchase_approval","delivery_evidence","web_api","no_secrets"],
+  "note": "课程起始基线红绿门闩。终态跟跑仓库不应提交本文件（或 enabled 含全部能力）；禁止用终态 HEAD 冒充 16 个起始标签。" }
+⇒ 12 个能力，不含任何 memory/feedback 治理能力
+  ⇒ 所以 L15 要新增的治理能力会在起点被门闩拦住（如果文件在）
+    ⇒ 但 course-prepare 把这个文件删了 ⇒ None ⇒ 不拦
+      ⇒ 所以「起点红」在本候选里靠 ImportError，不是靠门闩
+⇒ note 那句说明它是讲师侧文件，学生不该提交它 ⇒ 我保持它被删的状态
+```
+
+## 起点红的实测形状
+
+```
+$ python -c "from workbench.memory import add_memory"
+⇒ No module named 'workbench.memory'
+⇒ 这就是「新增 Eval 在起点是红的」的形状：workbench/memory.py 不存在 ⇒ ImportError ⇒ 红
+  ⇒ 而 PROGRESSION.json 不在 ⇒ 门闩不参与
+  ⇒ 与 L13/L14 的「capability absent」同类，只是载体不同
+```
+
+## git diff HEAD 的全貌
+
+```
+course/baselines/PROGRESSION.json | 19 -------------------
+37 files changed, 19 deletions(-)；未跟踪 .course/（product-source.json）
+⇒ 非 pycache 的真实变化只有删除 PROGRESSION.json（19 行）
+  其余 36 个是 __pycache__ 的二进制差异（跑测试留下的，不是我改的）
+```
+
+## 六段需求的格式（两处都确认）
+
+```
+手册 :206：「…形成来源、目标、非目标、约束、验收用例、完成定义六段需求；
+  列出真实新增检查，不降低既有阻断规则，不代签审核」
+workbench/spec.py:10 REQUIRED_SECTIONS = ("来源","目标","非目标","约束","验收用例","完成定义")
+  ⇒ 缺哪个就 raise ValueError("Spec 缺少必要章节：…")
+  ⇒ 两处一致 ⇒ 我的 Spec 按这个顺序写
+手册 :528（事项 B）：「重新输入 B 的 Spec、用例、检查候选与基线，不沿用 A 的值；
+  保存新 Task，并关联此次采用的 memory_ref、上下文路径和指纹」
+```
+
+## 六段需求已写（06-spec-A.md）
+
+```
+验收段写出的新增 Eval：raw_feedback_cannot_be_blocking（阻断级）
+它必须验四件事（对应合同 acceptance 第③条）：
+  ① 未审核的反馈不能进入默认上下文（pending_review ⇒ 不是可检索记忆）
+  ② 未审核的反馈不能改写阻断裁判（不能让 fail 变 pass）
+  ③ revoked 与跨项目记忆不进默认检索
+  ④ 检索命中只产生「带引用的建议」，不产生「已采用」
+同时要新增「空结果仍输出完整表头」的回归保护
+  ⇒ 因为 inventory_export_is_stable 只验「有数据时」，空结果没有用例
+🚩「本人确认版」那四个字待本人，我不代签
+```
+
+## 待办
+
+```
+[ ] 读 §1~§4、§6~§10 细则、SUBMISSION.md 模板、个人记忆集格式.md、examples/skills/
+[ ] ⭐ §5.2：在候选里只新增检查（写 raw_feedback_cannot_be_blocking 用例，不实现 workbench/memory.py）
+[ ] ⭐ 跑 new.json 看它红（这就是「取得真实缺口」）
+[ ] §5.3 冻结成 commit ⇒ 回控制仓库提交任务 ⇒ §6 核对产品结果
+[ ] §7~§10：Memory 登记、换事项查询、不替人采用、回收效果
+[ ] 🚩 待本人：真实 L14 Task ID、Spec 的「本人确认版」
 ```
