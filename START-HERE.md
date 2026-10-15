@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:39 +0800
+> 最后更新：2026-10-16 03:42 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -4262,4 +4262,97 @@ def dispatch(self, method, raw_path, headers, body) -> PlatformResponse:
      ⇒ 所以两者是两层：HTTP 幂等（响应级）/ 任务身份（任务级）
        ⇒ ⚠️ 但不能只用一层就说「够了」：要么说清两层各自负责什么，
          要么合并成一层 ⇒ 下一轮处理
+```
+
+---
+
+# ⚠️⚠️⚠️ L13 两处方法错误 + 一处改错文件
+
+## ⭐⭐⭐ 方法错误：我的探针**绕过了 HTTP 层**
+
+```
+⚠️ 我所谓的「真起服务」其实是 HarnessPlatformAPI(...) 后直接调 api.dispatch(...)
+⇒ 那不是「真起服务、真发请求」，只是调了同一段路由函数
+⇒ 这一点在已有测试的输出里现形了：
+   test_http_api 的日志： "POST /api/v1/tasks HTTP/1.1" 410
+   ⇒ 410 而不是 202；差别就是「走没走 HTTP 会话」
+⇒ 手册第 2 步与第 3 步都要求真的 HTTP，我一次都没做
+```
+
+**改法**：起 `workbench.server.App` + `make_handler` + `ThreadingHTTPServer`
+（照 `test_http_api` 的写法），或者 `main.py --port 8001` 后用 curl 打。
+判据：响应里要有真实 HTTP 状态行，请求要经过 socket。
+
+## ⭐⭐⭐ 改错文件：`platform_api.py` 不是 8001 首页那条路
+
+```
+main.py:8    from workbench.server import serve
+main.py:21   serve(args.host, args.port, args.runtime_dir)
+cli.py:320   serve         ⇒ server.py（默认 8000）
+cli.py:322   harness-serve ⇒ platform_server.py（默认 8010）
+⇒ 8001 首页（main.py）用的是 workbench/server.py
+⇒ ⚠️⚠️ 而我改的 workbench/platform_api.py 是 platform_server.py（8010，可选 Harness 驾驶舱）用的
+⇒ 而 AGENTS.md 写明：harness_web/ 是「可选完整 Harness 驾驶舱，默认端口 8010，
+  不属于 L01～L16 通过标准」
+⇒ 所以我把改动放在了不属于通过标准的那一侧
+```
+
+⚠️ 而 `server.py` 里 `grep 'api/v1/tasks'` 找不到，但 `test_http_api` 期望它能列任务
+⇒ 那条路由一定在别处（别的分发方式）⇒ **下一轮先查清，再改**
+
+## ⭐⭐ 已有测试与课程要求的一处冲突
+
+```
+tests/test_http_api.py:184  self.assertEqual(201, status)
+⚠️ 而手册 §2.2 与参考实验都是 202 Accepted
+⇒ 两种可能：① 那个测试写的是旧的 201，该改成 202
+            ② 两条路各有各的约定（不太可能：同一个端点给两个码，调用方没法写）
+⇒ 倾向 ①，但改已有测试要非常小心
+⇒ 而且这个用例现在失败（410），所以它不是「我弄红的」，而是起点就红
+   ⇒ 它可能就是本讲的起点红，而我要做的是让它变绿
+```
+
+## ⭐⭐ 已有测试期望的错误体形状与我的不同
+
+```
+tests/test_http_api.py:178  self.assertEqual("conflict", body["error"]["code"])
+⇒ 它期望嵌套 {"error": {"code": "conflict", …}}
+⚠️ 而 dispatch 现有出口是平铺 {"error": "conflict", "message": …}
+⇒ 两种形状不一致，要对齐；而这是已有约定，不该我另发明
+```
+
+## ⭐ 这一轮的净成果
+
+```
+✅ 测出四条缺口（内容是真的是真的，只是位置不对）：
+   ① 202 响应缺 status_url / view_url
+   ② 同键异内容该 409（现在被 ValueError ⇒ 422 吞了）
+   ③ 缺 GET /api/v1/delivery/views/<id>
+   ④ ⚠️ 网页入口没拦 execute_code（最小权限漏了）
+✅ 修好了（在 8010 那条路上）：四条都实测通过
+⚠️ 但 8001 首页那条路（server.py）还没动
+```
+
+## ✅ 下一轮顺序
+
+```
+① 查 server.py 怎么分发 /api/v1/tasks（grep 不到 ⇒ 分发方式不是字面量）
+② 查 server.py 的错误体形状（嵌套还是平铺）
+③ 判断四条修复该搬去 server.py，还是两条路共用一层
+④ 然后才真起 HTTP 服务、真发请求验证
+⑤ §5 真实采购核对 ｜ §6 同伴复验与迁移
+```
+
+## ⚠️ 我该记住的：同一类毛病第三次
+
+```
+⚠️ 第一次（L12）："我没找到那个 Skill 文件" —— 凭印象下结论
+⚠️ 第二次（本讲上一步）："两个端点不存在" —— 用关键词扫描代替真调用
+⚠️ 第三次（本讲这一步）："我起了服务测过了" —— 其实调的是 dispatch()，没走 HTTP
+⇒ 三次同形：用一个弱一些的检查，顶替了要求更强的那个，而每次都自以为做了
+⇒ ✅ 对策（写死）：
+   · 要求「真起服务」⇒ 必须出现 HTTP 状态行或 socket
+   · 要求「某端点存在」⇒ 必须发出一次请求看响应
+   · 要求「某文件/能力存在」⇒ 必须 find/grep 到位，不能凭印象
+   · 报告「做到了」之前先问：命令是什么？输出是什么？
 ```
