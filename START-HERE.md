@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:52 +0800
+> 最后更新：2026-10-16 04:55 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -9143,4 +9143,76 @@ web/app.js:314 async function renderInventory() { … state.inventory = result[0
 [ ] ⭐ G 区：独立 Eval（正式候选上，含完整阻断套件）
 [ ] ⭐ H~M：产品预览、测试、人审、恢复实验、导出与索引、最终演示
 [ ] 🚩 待本人：事务编号、运行目录、Spec 路径、--actor 姓名、写集确认、现场抽取、答辩、人审
+```
+
+---
+
+# 🎉🎉🎉🎉🎉 L16 现场新需求交付成功
+
+```
+⭐ L16 的成功任务 = TASK-FE48B898DB，status = review（等待具名人工审核）
+⭐ 冻结提交（第三版）= 553d35b04c420f8642f486c1b3ae88c6f99b2680
+十项全过：baseline_was_red ✅｜candidate_is_green ✅｜candidate_changed ✅
+  no_out_of_scope_writes ✅｜real_code_execution ✅｜execution_succeeded ✅
+  reports_are_valid ✅｜same_eval_cases ✅｜same_isolated_workspace ✅｜distinct_eval_attempts ✅
+pre_summary  = {total:2, passed:1, blocking_failed:1, decision:block}
+post_summary = {total:2, passed:2, blocking_failed:0, decision:pass}
+accepted = True
+changed_files = ['flowerp/inventory.py', 'web/app.js', 'web/index.html', 'workbench/api_v2.py']
+out_of_scope_files = []
+```
+
+## 交付了什么（四层对应辅导资料 §4）
+
+| 四层 | 实际改动 |
+|---|---|
+| 业务查询 | flowerp/inventory.py：list_balances(…, keyword="")，关键词进 WHERE（p.sku LIKE ? OR p.name LIKE ?），先匹配再分页 |
+| HTTP 接口 | workbench/api_v2.py：/api/v1/inventory/balances 读 query.get("keyword","") 并转发 |
+| 客户页面 | web/index.html：balances 标签页加搜索框（#inventory-keyword、查询按钮、#inventory-search-state） |
+| 客户页面 | web/app.js：把关键词发给 API，空结果写「没有匹配的库存记录」 |
+
+新增阻断级 Eval：inventory_keyword_spans_pages
+  验四件事：跨分页、跨组织不泄漏、只读、空结果明确，以及接口层转发
+
+## 我改了三版检查（每次都是我的假设错了）
+
+| 版本 | 提交 | 我错的假设 | 修法 |
+|---|---|---|---|
+| 第一版 | a431d4c | 以为 create_organization 存在；以为 Principal(roles=…) | 要查真实 API |
+| 第二版 | a1aa186 | 还在用 Principal(organization_id=…, roles=…) | Principal 是 dataclass，位置传参，第五个是 permissions |
+| ⭐ 第三版 | ⭐ 553d35b | ✅ 正确 | ✅ 冻结使用 |
+
+```
+⇒ 第一版：我编了 identities.create_organization("其他组织","OTHER")，它不存在
+   实测 IdentityService 只有 bootstrap(organization_name, username, password)，
+   而 bootstrap 仍建在 ORG-DEFAULT 里（返回 organization_id: ORG-DEFAULT）
+     ⇒ 所以改成「用一个不存在的组织号，看到任何行都说明过滤丢了」
+       ⇒ 这比建第二个组织更强：它直接验组织过滤本身
+⇒ 第二版：Principal 是 dataclass，字段 (user_id, organization_id, username, display_name, permissions)，
+   既有用例 :297 就是位置传参，而我用了 roles=
+```
+
+## 平替件这一轮踩了两个坑
+
+```
+⚠️ 坑 1：在 shell heredoc 里写带 \n 的 Python 补丁 ⇒ 外层 Python 把 \n 解释成真换行
+   ⇒ SyntaxError: unterminated string literal
+   ⇒ 修法：动作单独放一个 .py 文件，用 write 工具写；并加 sys.path.insert 让平替件导入
+     而文件名不能带横线（不能 import）⇒ 改名 l16_inventory_keyword_action.py
+⚠️ 坑 2：锚点 params: list[object] = [principal.organization_id] 在 inventory.py 里出现三次
+   ⇒ text.replace(anchor, …, 1) 替换了第一处，而那是 list_counts
+     ⇒ 于是关键词块插进了 list_counts，list_balances 完全没被改到
+       ⇒ 症状：带关键词、不带关键词、不存在的关键词三者返回同样的行数
+       ⇒ 修法：先把 list_balances 切出来，段内替换，并断言锚点在段内唯一
+```
+
+## 待办（手册 H~M 区）
+
+```
+[ ] ⭐ H 区：产品预览 ｜ I 区：测试/Loop/Graph ｜ J 区：正式 Task 人审（🚩 待本人）
+[ ] ⭐ K 区：独立恢复教学实验（examples/restore_lab.py）
+[ ] ⭐ L 区：结果导出、实际反馈与索引（发布证据索引）
+[ ] ⭐ M 区：合同最终入口与独立演示
+[ ] ⭐ 写 L16 的 SUBMISSION.md（七节，含五分钟答辩、技术债、下一事项迁移）
+[ ] 🚩 待本人：事项编号、运行目录、实际构建者姓名、现场需求抽取、答辩、人审
 ```

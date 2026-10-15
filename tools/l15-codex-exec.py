@@ -171,11 +171,18 @@ def _patch_report_columns(workspace: Path) -> str:
     return f"reports.py：为 {replaced} 个报表方法加上各自规格的 CSV 出口"
 
 
+#: L16 的动作单独放一个模块：把带转义的多行补丁写进 shell heredoc 已经坏过两次，
+#: 所以那边的补丁逻辑改成同目录的 .py 文件，这里只做导入与登记。
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from l16_inventory_keyword_action import patch_inventory_keyword as _patch_inventory_keyword  # noqa: E402
+
+
 #: 允许的修复动作：相对文件 → 动作。只列 write_scope 里那些。
 ACTIONS = {
     "flowerp/import_export.py": _patch_import_export,
     "flowerp/reports.py": _patch_reports,
     "flowerp/reports.py#columns": _patch_report_columns,
+    "flowerp/inventory.py": _patch_inventory_keyword,
 }
 
 
