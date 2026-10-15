@@ -8873,3 +8873,78 @@ examples/：cold-start-observation.md、restore_lab.py、五条命令与同目�
 [ ] 读 SUBMISSION.md 模板、examples/skills/release-evidence-review、examples 其余三个
 [ ] 🚩 待本人：现场需求抽取、答辩、人审
 ```
+
+---
+
+# 🎯 L16 手册 C 区直接回答了我的基线问题
+
+## C 区那句关键的话
+
+```
+⭐ C 区原文：「本路线不用 --source working-tree，
+   因为那种双仓快照另有 Git 库，不能直接作为本路线的会话提交。」
+⇒ 这正是我上一轮实测出来的事实：
+   --source working-tree 的 mode = local_source_snapshot，
+   baseline_commit = df24e2028f8e…，控制仓库 rev-parse 它 ⇒ fatal: Needed a single revision
+  ⇒ 而手册明说了 ⇒ 我的判断与手册一致
+    ⇒ 所以 L16 用默认 baseline，候选会是 git_worktree，baseline_ref = course/l16-start
+```
+
+## C 区的完整前置检查（六步）
+
+```
+① $l16Item = 首页实际事项编号；$l16Runtime = 原工作台运行目录
+② $l16Evidence = $l16Runtime/l16-evidence，创建它（本人六段 Spec 放这里）
+③ course-contract --lesson 16
+④ spec $l16Spec ⇒ 非 0 ⇒ throw '先修正本人 Spec'
+⑤ git rev-parse --verify 'refs/tags/course/l16-start^{commit}' ⇒ 非 0 ⇒ throw '缺课程标签，停止准备'
+⑥ course-prepare --lesson 16 --task-id … --runtime-dir … ⇒ 非 0 ⇒ throw '保留准备错误，先排查'
+```
+
+⭐ 一个我只在 L15 见过的字段：
+```
+⭐「保存返回的 path、baseline_commit，且 baseline_semantics 应为 tagged_start；
+   缺标签退回 progression_gate 只可预习，不进入真实执行。」
+⚠️ 而我上一轮的默认基线候选：baseline_ref = course/l16-start，
+   baseline_commit = eb09ed8d…
+   🚩 而 course-status 打印的是 baseline_semantics: progression_gate
+     ⇒ 那按手册 ⇒ 只可预习，不进入真实执行 ⇒ 要核清它是逐候选的还是全局的
+```
+
+## D 区：旧绿、新红（含双模块守卫）
+
+```python
+import eval.harness, flowerp
+root = Path.cwd().resolve()
+assert all(Path(m.__file__).resolve().is_relative_to(root) for m in (eval.harness, flowerp))
+```
+⇒ 失败时：「先修正候选来源，不能算目标红灯」
+⇒ L15 的守卫只验 eval.harness；L16 多验了 flowerp（因为需求要动业务层）
+
+```
+--case delivery_evidence_and_review_controls --report-path <start>/old.json
+   ⇒ 非 0 ⇒ throw '旧项未绿，保留报告并排查'
+--case $l16Case --report-path <start>/new.json
+⇒ 输出「旧项：$l16OldExit；新项：$l16NewExit；报告：$l16StartReports」
+```
+
+## 而一个矛盾还在
+
+```
+⚠️ D 区守卫要求 flowerp.__file__ 在候选内
+⇒ 而默认基线候选的 flowerp/ 是旧版：api.py/server.py/__main__.py 全不在
+  ⇒ 而 L16 的需求要动 HTTP 接口（辅导资料 §4 的四层之一）
+    ⇒ 若实现在控制候选里 ⇒ 缺 api.py ⇒ 做不了
+    ⇒ 若实现在独立 FlowERP 里 ⇒ 那 D 区守卫验的是什么？⇒ 要读 E/F 区看它怎么衔接
+```
+
+## 待办
+
+```
+[ ] ⭐ 核 course-prepare 输出里的 baseline_semantics
+[ ] ⭐ 读 E 区（冻结检查提交）、F 区（正式执行）
+[ ] ⭐ 读 G/H/I/J/K/L/M
+[ ] ⭐ 定「需求实现在哪份候选」
+[ ] 读 SUBMISSION.md 模板、examples/skills/release-evidence-review
+[ ] 🚩 待本人：首页实际事项编号、原工作台运行目录、本人六段 Spec 路径、现场需求抽取、答辩、人审
+```
