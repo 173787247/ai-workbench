@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:16 +0800
+> 最后更新：2026-10-16 04:17 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -6259,5 +6259,81 @@ Escape ⇒ dialog-cancel.click() ⇒ close({confirmed:false}) ⇒ 会去恢复
 [ ] ⭐ 写 SUBMISSION.md（七节，按 Skill 三分法）
 [ ] 🚩 真实键盘、390px 窄屏、五问走查 ⇒ 需浏览器与同伴 ⇒ 待本人
 [ ] 耗时导出的迁移（设计层先写，实现待做）
+[ ] 🚩 待本人定九件
+```
+
+---
+
+# 🎉 L14 补上我自己引入的窄屏缺口
+
+## 缺口比我以为的更严重
+
+```
+index.html:96  <span class="sync-state" id="sync-state"><i></i><span>数据已同步</span></span>
+styles.css:38  @media(max-width:1200px){ … .sync-state span{display:none} }
+styles.css:40  @media(max-width:760px){ … .sync-state{display:none} }
+⇒ 真实梯度：>1200px 文案可见；1200~761px 只剩小圆点；≤760px 整个隐藏
+  ⇒ 而小圆点只反映 loading/error 类，不表达「最新状态未知」
+    ⇒ 所以我把提示写进 #sync-state span ⇒ 绝大多数窗口宽度下都看不到文案
+⇒ 这是我引入的（原来那里是「数据已同步」，那条本来就不重要）
+  而「最新状态未知 + 时间」是要我据此决定的信息 ⇒ 被隐藏就是缺口的延续
+```
+
+## 修法：把同一句事实落到采购面板自己的横幅上
+
+```html
++ <p class="stale-banner hidden" id="purchases-stale" role="status" aria-live="polite"></p>
+```
+
+```javascript
+  const banner=$("#purchases-stale");
+  if(banner){ banner.textContent=stale?(message+"——"+help):"";
+              banner.classList.toggle("hidden",!stale); }
+```
+
+```css
+.stale-banner{margin:0 0 12px;padding:11px 14px;border:1px solid var(--amber);
+  border-radius:10px;background:var(--amber-pale);color:#8a5a12;font-size:12px;
+  font-weight:700;line-height:1.5}
+```
+
+理由：在 #page-purchases 内（只在该页出现）；在 @media 之外（任何宽度可见）；
+role="status" + aria-live="polite"（屏幕阅读器会念）
+
+## 合同 1d 第一次红了，而那是真发现
+
+```
+⚠️ 我第一次把 help 直接写进横幅 ⇒ 文本是「上次成功查询：04:15:48；本次查询失败…」
+⇒ 它说了「本次查询失败」，但没说「最新状态未知」
+  ⇒ 那是真缺口：横幅要自己说清结论，不能只描述现象
+    ⇒ 改成 message + "——" + help，结论词在最前
+```
+
+## 六条合同全过 + 辨别力
+
+```
+✓ 前置、✓ 合同 1c、✓ 合同 1d、✓ 合同 1、✓ 合同 2、✓ 合同 3 ⇒ 全部通过，退出码 0
+辨别力：撤销 app.js ⇒ ✗ 合同 1a 失败（旧文案「采购数据加载失败」）⇒ 退出码 1；恢复后通过
+blocking Eval ⇒ {"total":12,"passed":12,"decision":"pass"}
+改动范围 ⇒ M web/app.js、M web/index.html、M web/styles.css、?? tests/… ⇒ 都在写集内
+```
+
+## 「静态检查发现问题 → 修 → 复验」这个闭环的意义
+
+```
+实现阶段我跑的是 Node 合同检查：能验「文案对不对、按钮失效没有」
+  但它不知道 CSS 会不会把那句话藏起来
+§7 的静态检查发现 .sync-state span 在 ≤1200px 隐藏
+⇒ 所以「测试全绿」与「用户能看到」是两件事
+  ⇒ 同类：提示存在 ≠ 提示可见
+```
+
+## 待办
+
+```
+[ ] ⭐ 写 SUBMISSION.md（七节，按 Skill 三分法）
+    ⇒ 要把「静态检查发现的两条」写进「未完成」（Escape 焦点那条）
+[ ] 耗时导出的迁移（设计层先写，实现待做）
+[ ] 🚩 真实键盘、390px 窄屏、五问走查 ⇒ 需浏览器与同伴 ⇒ 待本人
 [ ] 🚩 待本人定九件
 ```
