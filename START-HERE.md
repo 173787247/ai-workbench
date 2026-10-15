@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:36 +0800
+> 最后更新：2026-10-16 04:37 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -7763,4 +7763,70 @@ accepted = True；implementation_evidence = True
 [ ] §7 登记 Memory ⇒ §8 换事项查询 ⇒ §9 不替人采用 ⇒ §10 回收效果
 [ ] 🚩 待本人：真实 L14 Task ID、Spec 的「本人确认版」、--actor 真实姓名、
     TASK-AD82BFE14C 的具名审核（现在停在 review，等人）
+```
+
+---
+
+# 🎉 L15 §6 核对产品结果：空库字节逐条对得上
+
+## worktree 身份（上次混过，这次写下来）
+
+```
+path = …/course-worktrees/TASK-AD82BFE14C
+HEAD = 9a4e9eee29d4（L15: freeze checks for personal requirement）
+flowerp/__main__.py 不在 ⇒ 起不了 HTTP，只能直调函数（L15 基线的固有形状）
+EXPORT_COLUMNS 在 import_export.py 里 2 处
+```
+
+## 四条导出在空库上的字节
+
+| 导出 | 修复前 | 修复后 | 表头 |
+|---|---|---|---|
+| inventory | 61 | 61 | sku,name,site,location,lot_id,on_hand,reserved,available |
+| products | 117 | 117 | sku,name,barcode,tracking,sales_price_cents,… |
+| customers | 101 | 101 | code,name,contact_name,phone,email,shipping_address,… |
+| ⭐ suppliers | ⭐ 0 | ⭐ 88 | code,name,contact_name,phone,email,address,payment_terms_days,lead_time_days,status |
+
+## 报表公共出口两条路径都对
+
+```
+to_csv([], fieldnames=["a","b"]) ⇒ 'a,b\r\n'  ✅ 有表头
+to_csv([]) ⇒ ✅ 明确拒绝：ValueError: 空结果需要调用方提供 fieldnames
+⇒ 把「我给不出结构」伪装成「没有内容」也是掩盖，同「把权限失败包装成空文件」
+```
+
+## 有数据时的回归
+
+```
+inventory（两个商品各入库）⇒ 3 行：
+  表头 sku,name,site,location,lot_id,on_hand,reserved,available
+  VERIFY-A,验证商品 A,MAIN,STOCK,,3,0,3
+  VERIFY-B,验证商品 B,MAIN,STOCK,,2,0,2
+⇒ 与既有用例 inventory_export_is_stable 的期望逐字一致
+```
+
+## 它澄清了我先前的反复
+
+```
+⚠️ 我先说「只有 suppliers 没修，另三条已有列名」
+⇒ 后来更正「L15 起点四条全无硬编码列名，四条全坏」
+⇒ 而真相是两次观察都对，只是层面不同：
+   · ensure_local_defaults() 造了基础行 ⇒ inventory/products/customers 的查询非空
+     ⇒ rows[0] 恰好给出正确列名 ⇒ 可观察行为「看起来是对的」
+   · 只有 suppliers 在空库上真的 0 行 ⇒ 落到 if not rows: return "" ⇒ 0 字节
+   · 而「代码层面有没有硬编码列名」⇒ 四条都没有，都靠 rows[0]
+⇒ 正确结论要分两句说：
+   ① 可观察行为：只有 suppliers 空结果是坏的
+   ② 结构性风险：四条都依赖第一条记录，一旦某条真空就会坏
+   ⇒ 我的修复把四条都改成显式规格：从「恰好对」变成「结构上对」
+```
+
+## 待办
+
+```
+[ ] 读 §1~§4、§6~§10 细则、SUBMISSION.md 模板、reference/个人记忆集格式.md、examples/skills/
+[ ] ⭐ §7 把这条经验登记为可治理 Memory（六要素、四状态）
+[ ] §8 换一个事项查询这条经验 ⇒ §9 用上下文但不替人采用 ⇒ §10 回收效果、完成跨事项证据
+[ ] 🚩 待本人：真实 L14 Task ID、Spec 的「本人确认版」、--actor 真实姓名、
+    TASK-AD82BFE14C 的具名审核（停在 review）
 ```
