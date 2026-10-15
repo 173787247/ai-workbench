@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:03 +0800
+> 最后更新：2026-10-16 03:04 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -2407,4 +2407,51 @@ read-only       allowed  ｜ invalid-path    rejected ｜ duplicate-name rejecte
 ```
 `task-review TASK-56D04E9DFC --reviewer <你的名字> --decision <accept|rework> --note '…'`
 + **真实事项编号** ⇒ **我不代签**
+```
+
+
+---
+
+# ⭐ L11 §3 采购实验（**七个模式全对**）
+
+## 环境检查
+
+```
+python -X utf8 -m workbench.cli environment-check --product
+⇒ `{"ok": true, "scope": "installation", "**product_checked**: true, …}` 退出码 **0**
+⇒ ⭐ **产品侧（独立 FlowERP）被真的检到了**
+```
+
+## 七个模式（**与手册逐字一致** ✓）
+
+```
+normal          退出 **0**  ✅ "**PR-TARGET proposed**; **reason trimmed**; one request added"
+zero            退出 **0**  ✅ "zero: **ValueError**; **five tables unchanged**"
+negative        退出 **0**  ✅ 同上
+blank-reason    退出 **0**  ✅ 同上（**去空白后为空 ⇒ 拒绝** ✓）
+unknown-sku     退出 **0**  ✅ "**NotFound**; five tables unchanged"
+duplicate-id    退出 **0**  ✅ "**IntegrityError**; five tables unchanged"  ← **辅导资料点名的**
+⭐ premature-stock 退出 **1**  ⚠️ "[BLOCK] **AssertionError: application changed stock, events, or orders**"
+⇒ ⭐⭐ **手册**：「**前六项退出 0 是检查通过；最后一项退出 1 是检查成功发现故意注入的问题 ✗
+   它不证明个人候选真的存在该缺陷。**」✓
+```
+
+## ⭐ 三处单独记的
+
+```
+① `duplicate-id` 报 `IntegrityError` ⇒ ⭐ **不能把重复拒绝称作幂等成功** ✗
+   与 L09 的 `receiving_is_idempotent`（**"同一入库幂等键只生效一次"**）形成对照 ✓
+② `normal` 的 `reason trimmed` 与 `blank-reason` 的 `ValueError` **是同一条规则的两面** ✗
+   ⭐ **只测 normal 会漏掉"全空格"这个边界** ✓
+③ `premature-stock` 的判据是"**申请有没有碰库存相关的表**"✗ **不是"库存数字对不对"** ✓
+   ⇒ ⭐ **这就是"把提出想买和已经到货分开"的可检查形式** ✓
+```
+
+## 下一步（**L11**）
+
+```
+[ ] §4 固定候选与两份子任务合同（**§4.1 先观察一次"测试通过 ✗ 业务仍有错误"** ✓）
+[ ] §4.2 通过工作台创建本人的交付任务 ｜ §4.3 为两个子代理写清楚分工
+[ ] §5 真实并行 ⇒ ⭐ **用 `subagent` 平替 Codex 原生 Subagents**
+[ ] §6 主 Agent 串行整合与复验 ｜ §7 复盘与 Skill 迁移
 ```
