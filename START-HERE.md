@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 02:14 +0800
+> 最后更新：2026-10-16 02:16 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -1091,4 +1091,69 @@ summary: {"total":22, "passed":19, "blocking_failed":1, "observing_failed":2, "d
 ① **用哪个仓库**（`owner/name`）
 ② **许可**：建候选分支 ✗ 推上去 ✗ 开 PR（**不碰主分支**）
 ⇒ ⚠️ 若不想让我碰任何远程仓 ⇒ **L08 §6 停在"待你在远程执行"** ✗ **我按手册写"待验证"** ✓
+```
+
+
+---
+
+# ⭐ L08 §5 续（**审查差异 ✗ 写待审工作流**）
+
+## ⚠️⚠️ 我先纠正自己**两处错误怀疑**（**都是"读代码下结论 ✗ 没跑"** ✓）
+
+```
+⚠️ 怀疑 1：「第 68 行没传 `--report-path` ✗ 而第 71 行读它 ⇒ **报告不存在**」
+⇒ ❌ **错的**。`eval/harness.py:101`：
+     target = Path(report_path) if report_path else Path(".runtime/reports") / f"harness-{suite}.json"
+   ⇒ ⭐ **默认就写 `.runtime/reports/harness-blocking.json`** —— **正是第 71 行读的** ✓
+   ⇒ ✅ **实测：跑完确实生成了（7109 字节）** ✓
+
+⚠️ 怀疑 2：「默认 `--suite blocking` 不跑产品用例 ⇒ **我的个人检查也不在里面**」
+⇒ ❌ **错的**。实测 19 项里 ✗ **我的 7 项全在** ✓
+   ⇒ ⭐ **只过滤 `PROJECT_CASES` 里的产品用例**（`sales_credit_and_atomic_reservation` ✗ 不在）✓
+
+⚠️ 怀疑 3：`on: None` ⇒ 以为 YAML 写错了
+⇒ ❌ **不是**。PyYAML 按 YAML 1.1 把裸 `on` 解析成 `True` ⇒ **键名变成 True** ✓
+   ⇒ ✅ GitHub Actions 用 YAML 1.2 ✗ 不受影响 ✓
+
+⇒ ⭐⭐ **三次同一个形状**：**我"自述"✗ 没"实测"** ✓
+   ⇒ ⭐ **而课程反复讲的就是"模型自述完成不替代 Eval 结果"** ✓
+```
+
+## ⭐ 实测到的（**这才是证据** ✓）
+
+```
+默认 --suite blocking 的 19 项里（退出码 1）：
+  l06_stock_consistency ✓ ｜ l05_personal_receiving ✓ ｜ l05_personal_scope ✓
+  l06_harness_contract ✓ ｜ l07_draft_amount ✓ ｜ l07_rejected_order ✓ ｜ l07_amount_transfer ✓
+  help_image ✗（observing）｜ ⭐ sales_credit_and_atomic_reservation ✗ **不在**
+⇒ ⭐ **显式 `--case` 能单独跑**：3 项 ✗ `sales_credit_and_atomic_reservation` **失败**（**L08 的缺陷**）✓
+⇒ ⭐ **这就给"必须显式 `--case`"提供了实测依据** ✓
+```
+
+## ⭐ 待审工作流（**`<候选>/ci_staging/eval.yml` ✗ 133 行** ✓）
+
+```
+⚠️ **活动的 `.github/workflows/eval.yml`（81 行）一字未动**
+   （md5 `e45447e94e429a8f716445f2fbe7585c` ✓）
+⇒ ⭐ **仿 L07 的 `hook_staging/` 做法** —— 放不生效的目录 ✗ 由本人决定何时安装 ✓
+```
+
+**相对示例改了五处 ✗ 每处都有依据**：
+```
+① 产品来源 congde/flowERP@e0088d3a → vars.L08_FLOWERP_*（手册第 2 步）
+② 补"固定版本校验"步骤（示例有）
+③ 补"来源记录" ✗ **我加了一条 SHA 一致性断言**（示例没这条）
+④ 补显式 --case 业务命令（**实测：默认入口不跑产品用例**）
+⑤ 报告目录 → _ci_reports/Run编号-重跑次数/（手册：免不同尝试混用）
+⇒ 并把 `!cancelled()` **加严**为「再要求 environment 与 sources 两步成功」
+   ⇒ ⭐ **依据**：手册「**环境失败不能解释为业务红灯**」✓
+```
+
+**YAML 校验**：`safe_load` ⇒ **合法** ✗ 11 步 ✗ 触发器 `['pull_request','push','workflow_dispatch']` ✓
+**凭据**：只有两行注释形式的占位 ⇒ ✅ **没有真实凭据** ✓
+
+## 🚩 仍是那个待你许可的事
+
+```
+**建候选分支 ✗ Actions variables ✗ 推送 ✗ PR ✗ 真实 Run** ⇒ **都在你的远程仓库上** ✓
 ```
