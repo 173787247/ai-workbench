@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:48 +0800
+> 最后更新：2026-10-16 04:49 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -8798,5 +8798,78 @@ examples/：cold-start-observation.md、restore_lab.py、五条命令与同目�
 [ ] ⭐ 读第 1、2 步的正文
 [ ] ⭐ 定 L16 的基线（要含 HTTP 层）并在那份基线上重新确认缺口
 [ ] 读 SUBMISSION.md 模板与 examples/skills/release-evidence-review
+[ ] 🚩 待本人：现场需求抽取、答辩、人审
+```
+
+---
+
+# 🎯 L16 基线问题彻底查清：两个候选各缺一半
+
+## 两种候选的对照（实测）
+
+| | --source working-tree | 默认 baseline |
+|---|---|---|
+| mode | local_source_snapshot | git_worktree |
+| baseline_ref | ⚠️ None | course/l16-start |
+| baseline_commit | ⚠️ df24e2028f8e… | eb09ed8dfbd65dae4d421c90a672574c6358973b |
+| ⭐ HTTP 层 | ✅ api.py(661)/server.py(214)/__main__.py(22) | ⚠️ 全不在 |
+| ⭐ 能否被 course-submit 解析 | ❌ 控制仓库 fatal: Needed a single revision | ✅ 在控制仓库里 |
+| git diff HEAD | （它自己的快照） | 只有 PROGRESSION.json 被删 19 行 |
+| ⭐ .course/product-source.json | ✅ root=~/GO/flowERP-customer，manifest 42 个文件 | （不适用） |
+
+⇒ 两者各缺一半：
+   working-tree 有 HTTP 层但 commit 不在控制仓库，course_delivery.py:84 的 rev-parse 会失败
+   默认 baseline 在控制仓库但 flowerp/ 是历史组合源码，无 HTTP 层
+
+## 那个快照提交自己说清了身份
+
+```
+⭐ 候选自己的 HEAD = df24e2028f8e898e9e8a77b64bf3c3b655b8eb62
+⭐ 它的 commit message：「Local lesson start snapshot; not a published course baseline」
+   ⇒ 所以 --source working-tree 故意用了一个本地快照提交
+     ⇒ 而 --session-baseline-ref 要求的是控制仓库里的 commit ⇒ 两者设计上就不通用
+```
+
+## 辅导资料那句话现在完全懂了
+
+```
+⚠️「课程命令使用的起始标签可能包含历史组合源码，和你刚冷启动的当前双仓版本不同。
+   正式执行前，须在将要实施的那份基线上再次确认缺口与检查结果。
+   不能把当前客户仓库的失败拼到另一份候选上。」
+⇒ 它说的正是我测出来的：course/l16-start 的 flowerp/ 是历史组合源码（无 HTTP 层）；
+  独立 FlowERP 是刚冷启动的当前版本（有 HTTP 层）⇒ 不能把一份的失败拼到另一份上
+```
+
+## L16 的正确做法（命令区 B 已指明）
+
+```
+⭐ 命令区 B：「取得两份独立 Git 克隆」「两份新仓库各自根目录创建虚拟环境」
+   「在新 CodexFDE 控制实例根目录执行环境检查，填写同一份新 FlowERP 克隆路径」
+   终端一 serve --port 18160 --runtime-dir .runtime/erp-trial-01（客户服务）
+   终端二 serve-workbench --port 18161 --runtime-dir …/workbench-trial-01 --erp-url http://127.0.0.1:18160
+   终端三 http://127.0.0.1:18160/api/v1/health/ready
+⇒ 所以 L16 是两个独立仓库并跑，不是「一个组合 worktree」
+  ⇒ 做法：需求实现在独立 FlowERP；控制仓库那侧单独核；并如实记这一点
+```
+
+## 已验证的四个前置
+
+```
+✅ course/l16-start 存在 ⇒ eb09ed8d…
+✅ course-status ⇒ lesson_count 16、course_ready True、baseline_semantics progression_gate
+   （A 区说它不能证明冷启动或学生实现）
+✅ environment-check --product ⇒ 退出码 0，packages 指向 ~/GO/flowERP-customer
+✅ InventoryService.list_balances(principal, site_id, product_id, low_stock_only)
+   ⇒ 没有 keyword ⇒ 需求尚未实现
+```
+
+## 待办
+
+```
+[ ] ⭐ 读命令区 C/D/E（准备检查候选、运行旧绿新红、冻结检查提交）
+[ ] ⭐ 读命令区 F/G/H/J（正式执行、独立 Eval、产品预览、人审）
+[ ] ⭐ 定 L16 的实施位置（独立 FlowERP 还是控制仓库侧）
+    ⇒ 合同 write_scope 含 flowerp/、workbench/、eval/、web/、tests/ ⇒ 两边都在写集内
+[ ] 读 SUBMISSION.md 模板、examples/skills/release-evidence-review、examples 其余三个
 [ ] 🚩 待本人：现场需求抽取、答辩、人审
 ```
