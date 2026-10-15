@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:25 +0800
+> 最后更新：2026-10-16 04:26 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -7030,3 +7030,83 @@ after-add.json  22/21 block   ← 加了检查后只有新那条红，其余 21 
 
 **一处补救**：手册那条命令一次跑两条，而新用例在 old 时点还不存在 ⇒ `old.json` 只跑既有那条，
 这反而更符合「改动前基线」的语义。手册与现实的这个落差记下了。
+
+---
+
+# ⭐⭐⭐⭐ L15 §5.3 后半：提交任务的确切命令与守卫
+
+## 回控制仓库后的两个守卫
+
+```
+git rev-parse HEAD                              # 在检查候选里（已做，fde24f2）
+cd "$l15Control"                                # 回控制仓库
+git rev-parse --verify "${l15Baseline}^{commit}"
+  ⇒ 失败时：「会话基线不能在控制仓库解析」
+git merge-base --is-ancestor course/l15-start "$l15Baseline"
+  ⇒ 失败时：「会话基线不满足祖先条件，先保留并核对提交」
+⇒ 两个守卫都在验「这个冻结提交确实属于控制仓库这条历史，而且在起点之后」
+```
+
+## 两个输入
+
+```
+$l15Actor  = 实际构建者姓名 ⇒ 🚩 待本人填（我不代签；按约定先填默认值并标注）
+$l15Scopes = 已确认的业务修复相对文件 ⇒ 手册明说「不含冻结检查」
+             ⇒ if (-not $l15Scopes.Count) { throw '必须填入本次明确允许文件' }
+```
+
+## 提交命令（逐字）
+
+```
+python -X utf8 -m workbench.cli course-submit --lesson 15 --execute-code
+  --runtime-dir $l15Runtime --actor $l15Actor --requirement-spec $l15Spec
+  --eval-case $l15Case --session-baseline-ref $l15Baseline --execution-timeout 900
+  --allowed-file <每个业务文件>
+```
+
+## 我要填的值
+
+| 参数 | 值 |
+|---|---|
+| --lesson | 15 |
+| --execute-code | 开关（手册原样 ⇒ 真的执行，不是只登记） |
+| --runtime-dir | .runtime/l04-learning |
+| --actor | 🚩 待本人（默认填 rchua，标「待本人确认」） |
+| --requirement-spec | lesson-15-submission/06-spec-A.md 绝对路径 |
+| --eval-case | raw_feedback_cannot_be_blocking |
+| --session-baseline-ref | fde24f2f6023be2814b219bcc049549314a50090 |
+| --execution-timeout | 900 |
+| --allowed-file | flowerp/import_export.py、flowerp/reports.py、workbench/memory.py |
+
+## --allowed-file 只列业务文件的三个理由
+
+```
+① 手册明说「不含冻结检查」⇒ eval/cases.py 与 eval/harness.py 不列
+   ⇒ 它们已在冻结提交 fde24f2 里，再列就等于允许改检查
+     ⇒ 而那正是「检查被实现反向修改」的入口，必须堵死
+② 本讲要修的两处业务缺陷：flowerp/import_export.py（suppliers 空结果走 else: return ""）、
+   flowerp/reports.py（to_csv 空结果 return ""）
+③ 本讲要新增的工作台能力：workbench/memory.py（四状态、检索、撤回排除、采用记录）
+   ⇒ workbench/feedback.py 不改（已有 pending_review、审核、CAS）⇒ 不在允许清单
+```
+
+## 必须先确认的事
+
+```
+⚠️ course-submit 会不会自动跑 Eval？⇒ 要读帮助或源码
+   ⇒ 如果它自己跑，「先冻结检查」这个机制就靠它兑现
+   ⇒ 而我得知道它跑哪套、用哪个解释器、报告写哪
+🚩 --execute-code 意味着真的执行 ⇒ 它会动我的候选目录吗？
+   ⇒ 这直接关系到「我的改动会不会被它覆盖」⇒ 必须先读 course-submit
+```
+
+## 待办
+
+```
+[ ] ⭐ 读 workbench/course_mainline.py 或 cli.py 里的 course-submit
+[ ] ⭐ 回控制仓库跑两个守卫
+[ ] ⭐ 填 --actor（待本人，默认填并标注）⇒ 真跑 course-submit
+[ ] §6 核对产品结果与摘要（真 HTTP、空库、suppliers 应有九列表头）
+[ ] §7~§10
+[ ] 🚩 待本人：真实 L14 Task ID、Spec 的「本人确认版」、--actor 的真实姓名
+```
