@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 02:46 +0800
+> 最后更新：2026-10-16 02:48 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -1954,5 +1954,69 @@ $ ./.venv/bin/python -X utf8 -m agent.loop --max-rounds 1 --token-budget 30000
 ```
 [ ] 写 **Loop 建设 Spec**（六段 ✗ 覆盖五条）✗ **先确认 `.runtime/l10-run-context.json` 在不在**
 [ ] 查 `tests/` 里有没有 l10 相关测试
+[ ] §3 建设（**保持发货仍红**）
+[ ] ⚠️ 待补：**PPT 288 行 ✗ `reference/` ✗ `assets/` ✗ `examples/skills`**
+
+
+---
+
+# ⭐ L10 §3（**四项个人检查 ✗ 红起点**）
+
+## 缺陷：`flowerp/service.py:285 ship_order` —— **第三次 `if False and`**
+
+```python
+⭐12 |   if False and order["status"] != OrderStatus.RESERVED:
+16 |       raise InvalidTransition(f"只有 reserved 订单可发货，当前为 {order['status']}")
+⇒ ⭐⭐⭐ **守卫被短路 ⇒ 任何状态都能发货** ✗ **正确实现就在后面 ✗ 是死代码** ✓
+⇒ ⭐ **与 L05 `if False and exists:` ✗ L09 `if False and status == RESERVED:` 同一手法**
+⇒ ⭐ `stock` 表有 `CHECK(on_hand >= 0)` ✗ `CHECK(reserved >= 0 AND reserved <= on_hand)`
+   ⇒ **草稿发货把在库减成负数 ⇒ 约束报错** ✓
+```
+
+## 四项个人检查 ✗ 红起点
+
+```
+[BLOCK] illegal_transition_is_blocked       88 ms  （产品用例 ✗ 进程边界）
+[PASS ] l10_personal_legal_ship            164 ms  在库 10/8→6/5 ✗ 总预占 6/4→2/1 ✗ 可用仍 4/4
+                                                   ✗ 流水各减 4/3 ✗ OTHER 未变 ✗ TARGET shipped
+[BLOCK] l10_personal_draft_refusal         154 ms  「**发货应由状态机以 InvalidTransition 拒绝 ✗ 实际没有**」
+[BLOCK] l10_personal_cancelled_refusal     158 ms  **IntegrityError: CHECK constraint failed**
+[BLOCK] l10_personal_repeat_refusal        163 ms  **同上**
+⇒ 退出码 **1** ✗ {"total":5, "passed":1, "blocking_failed":4, "decision":"block"}
+```
+
+## ⭐⭐⭐ 一处关键的**自我修正**
+
+```
+⚠️ 我第一版的 `_refusal` 捕获 `Exception` ⇒ **`cancelled`/`repeat` 竟然通过了** ✓
+⇒ ⭐⭐ 原因：**`stock` 表的 CHECK 约束偶然拦住它们**（`reserved -= 4` 压到负数）
+   ⇒ ⚠️ **"约束报错"也算"被拒绝"** ⇒ **缺陷仍在却判通过** ✓
+⇒ ⭐ **依据 `erp_cases.py` 既有用例用的是 `except InvalidTransition`** ⇒ ✅ **收窄**
+   ⇒ **三项拒绝检查全红 ✗ 理由各自不同 ✗ 都能定位到"守卫没生效"** ✓
+```
+
+## ⭐ 与辅导资料的对照（**如实说**）
+
+```
+辅导资料 §1：「**V0 有两项失败：合法发货被拒绝 ✗ 草稿发货被放行。**」
+⚠️ **我的候选只有一项**：**草稿被放行** ✗ **合法发货是好的**（`legal_ship` 通过 ✓）
+⇒ ⭐ **"两项失败"是教学 V0 的设计 ✗ 我这个候选的剥离只做了后一项** ✓
+   ⚠️ **而四项检查仍全建了** ✗ **其中一项起点就绿 ⇒ 它是"回归检查"** ✓
+```
+
+## ⚠️ 一处我自造的 bug（**已修**）
+
+```
+⚠️ 注册时写的 `l10_checks.…` 没有对应 import ⇒ `NameError` ✓
+⇒ ⭐ 根因：**`harness.py` 用的是 `from . import cases`** ✗ 不是 `from eval import …`
+   ⇒ ⚠️ **我的脚本按 `from eval import ` 找替换点 ⇒ 没找到 ⇒ 静默跳过** ✓
+   ⇒ ✅ 修法：`from . import l10_personal_checks as l10_checks` ✓
+```
+
+## 下一步
+
+```
+[ ] **写 Loop 建设 Spec**（六段 ✗ 覆盖手册五条）—— **本轮还没写**
+[ ] `.runtime/l10-run-context.json` ⚠️ **现在不在** ⇒ **手册说 §4 由本人确认后生成** ✓
 [ ] §3 建设（**保持发货仍红**）
 [ ] ⚠️ 待补：**PPT 288 行 ✗ `reference/` ✗ `assets/` ✗ `examples/skills`**
