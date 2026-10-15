@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 01:59 +0800
+> 最后更新：2026-10-16 02:01 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -16,7 +16,7 @@
 | **L04** | 🟡 **A 与 B 都做完 ✗ 都在等具名接受** | Ticket A：`execution.py` 286 ✗ `task_store.py` 158 ✗ `eval/harness.py` 126 ✗ CLI 204（**11 命令**）✗ Ticket B：候选 +39 行 ✗ **五个用例全 pass** |
 | **L05** | 🟡 **§0~§6 完成 ✗ §7.1 页面回填与 §8 具名决定待本人** | 业务/工程两份 Eval ✗ **个人新增断言（变异体验证过）** ✗ 幂等修复 **11→14→14→17** |
 | **L06** | ✅ **§1~§7 完成** | 四处报告 ✗ **假绿→如实报红→必需全绿** ✗ 两次修复 Diff ✗ **独立复验：接受** |
-| **L07** | 🟡 **§0~§4 完成 ✗ §5 起待做** | §3 六种协议输入全对 ✗ §4 调用链含**两层超时/cwd 校验/防重入** |
+| **L07** | 🟡 **§0~§5.4 完成 ✗ §5.5 起待做** | 候选已建 ✗ **8 项检查已接入** ✗ **首次报告 19 项 / 2 BLOCK** |
 | **L08~L16** | ❌ **未开始** | 计划见 `tools/L02-L16-PLAN.md` |
 | **结营毕设** | ❌ 未开始 | |
 
@@ -597,4 +597,81 @@ command-error stderr `FileNotFoundError` ✗ stdout "未完成验证" block
 L07 §5  取得候选 ✗ 准备解释器 ✗ 接入 L06 检查 ✗ 按 V2→V3 时序诊断
 L07 §6  安装 ✗ 信任（`/hooks`）✗ 真实 Stop 触发 ⇒ ⚠️ **需要 Codex CLI ✗ 本机没有** ✓
 L07 §7  复验与迁移（**模拟邮件**）
+```
+
+
+---
+
+# ⭐ L07 §5.1~§5.4（**候选 ✗ 接入 ✗ 首次诊断**）
+
+## §5.1 保存要求与准备候选
+
+```
+course-contract --lesson 7  ⇒ 退出码 0
+   workbench_increment "**提交前本地护栏**" ✗ erp_increment "**交付销售订单创建**"
+   write_scope ["flowerp/","eval/","tests/","hook_staging/"]
+course/l07-start = 7d4db2bbb0dc590661a9b043c22de1b2ce619fbc
+course-spec --lesson 7 --output .runtime/l07-learning/FDE_SPEC-01.md  ⇒ 54 → 82 行 ✗ 六段
+course-prepare --lesson 7 --source working-tree  ⇒ 退出码 0
+   mode **local_source_snapshot** ✗ source_manifest **1000 个文件逐文件 sha256**
+```
+
+⚠️ **我自己又踩了 L03 那个坑**：追加的第七个 `##` 让 Spec 解析**退出码 1** ⇒ **降到 `###` 才通过** ✓
+
+## §5.2 候选自己的解释器
+
+```
+✓ flowerp/service.py 与 eval/harness.py 都在 ⇒ **是本次课程候选** ✓
+.venv 不在 ⇒ `python -m venv --system-site-packages .venv` ⇒ 退出码 0 ✓
+三个路径核对：候选的 .venv/bin/python ✗ 候选的 eval/harness.py ✗ 候选的 flowerp/service.py ✓
+⚠️ 我用 `Path(sys.executable).resolve()` 判"在不在候选内"⇒ 打印 **✗ 在候选外** ⚠️ **那是误导的**
+   （**.venv/bin/python 是符号链接 ✗ resolve 解到了基础 Python** ✓）
+```
+
+## §5.3 接入 L06 检查（**连接器 ✗ 退出码 0**）
+
+```
+它自己的说明：「**Connect verified personal L06 checks to an isolated L07 candidate,
+              without copying product code.**」
+registry  **cea45092… → 6c878ad8…**
+files     {"tests/test_l05_receiving.py":"cbe5fdfc…"} ⇒ **与 L05 冻结的一致** ✓
+status    "**connected; execution and human acceptance pending**" ✓
+接入后八项：l06_stock_consistency ✗ l05_personal_receiving ✗ l05_personal_scope ✗
+           help_image ✗ l06_harness_contract ✗ ⭐ **l07_draft_amount** ✗
+           ⭐ **l07_rejected_order** ✗ ⭐ **l07_amount_transfer**
+```
+
+## ⭐ §5.4 首次真实报告（**正是分诊表的第一行**）
+
+```
+cd <候选> && ./.venv/bin/python -X utf8 -m eval.harness --suite blocking  ⇒ **退出码 1**
+{"total": 19, "passed": 17, "blocking_failed": 2, "observing_failed": 0, "decision": "block"}
+
+[BLOCK] l07_draft_amount     65 ms  **AssertionError: expected=12000 actual=0**
+[PASS ] l07_rejected_order   56 ms  数量为零或负数 ✗ 第二行商品不存在均拒绝；三表保持原样
+[BLOCK] l07_amount_transfer  64 ms  **AssertionError: expected=11100 actual=0**
+```
+
+⇒ ⭐ **手册分诊表**：「**明确报告"预期12000 ✗ 实际5000" ⇒ 检查能抓错；接着查为何结束时没调用**」✓
+⇒ ⚠️ **而 `actual=0` 不是 5000** ⇒ **订单功能完全没实现 ✗ 不是漏乘数量** ✓
+   ⇒ **V2/V3 时序问题要到"订单做出来之后"才出现** ✓
+⇒ ⭐ **触发缺口仍在**：**这份报告是手工敲的命令 ✗ 不是 Stop 事件触发的** ✓
+
+**我 §2.1 写的四种假设的裁决**：
+
+| 假设 | 裁决 |
+|---|---|
+| ① 断言不足 | ❌ 不成立（**断言看得见真实金额**）|
+| ② 测错对象 | ❌ 不成立 |
+| ③ 环境故障 | ❌ 不成立（**19 项跑了 17 项通过**）|
+| ④ ⭐ **结束时漏调用** | ✅ **成立** |
+
+⇒ ⭐ **我押的 ④ 对了** ✓
+
+## 下一步
+
+```
+L07 §5.5  手工 Stop 输入启动真实处理器（**仍然不是宿主自动触发** ✓）
+L07 §6    安装 ✗ 信任（`/hooks`）✗ 真实 Stop 触发 ⇒ ⚠️ **需要 Codex CLI ✗ 本机没有**
+L07 §7    复验与迁移（模拟邮件）
 ```
