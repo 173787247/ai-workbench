@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:26 +0800
+> 最后更新：2026-10-16 03:28 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -3581,4 +3581,64 @@ L01~L11 ✅（🚩 五件待你）｜ **L12 §1~§8 + SUBMISSION 全部完成** 
 ① L10 的 `task-review` ② L11 §5/§6 的"接受或退回" ③ 证据冗余风险选 A/B/C/D
 ④ R4 的契约冲突（`ValueError` 还是 `ValidationError`）
 ⑤ **L12 具名软件审核 ✗ 业务批准人** ⑥ **L12 的 `--develop-mode` 默认值是否接受**
+```
+
+
+---
+
+# ⭐⭐⭐ L12 补齐：Skill 五个反例 ✗ 25 个 lab 模式
+
+## ⭐⭐ Skill 第 ④ 条**就是 L11 的 R3 的精确复述**
+
+```
+「**PR-TARGET 申请七件 ✗ 借用属于期初库存的 `opening` 键。最终单据为 `received` ✗
+  在库仍为 10 ✗ **目标流水为零**。摘要称"幂等检查通过 ✗ 入库成功"。**」
+期望：「**不能借用其他事件的成功**」✓
+⇒ ⭐⭐⭐ **而我在 L12 §5 修的正是它**（`Conflict: 入库键 rcpt:shared 已属于 PR-1` ✓）
+   ⇒ ⭐ **课程的期望与我的修法一致** ✓
+```
+
+## ⭐⭐⭐ `graph_control_lab` 的 16 个模式里 ✗ **三处参考实现自己承认的缺口**
+
+```
+⭐ `stale-approval` ⇒ **参考给 `completed`** ✗ `judgment`「**No candidate identity binding
+   or fresh Eval occurred**」✗ `additional_eval_calls = 0`
+   ⇒ ⭐⭐ **同一场景 ✗ 我的实现给 `develop` ✗ `rejected_stale_candidate`** ✓
+     ⇒ **这正是"个人实现"与"参考程序"的分界线** ✓
+⚠️ `empty-report`   ⇒ **`awaiting_human_review`**（**空报告竟然进了人审**）
+   ⇒ ⚠️ **而我的实现也没加"报告非空"校验** ✗ **如实记为一个缺口** ✓
+⚠️ `unchecked-move` ⇒ **`completed`**（**名字就在说"没校验的转移"**）
+   ⇒ ⭐ **而我的 `move()` 会抛 `ValueError`** ✓ **已补** ✓
+```
+
+## ⭐ 九个采购模式（**全过 ✗ 没弄坏** ✓）
+
+```
+approved 0 ｜ unapproved 0 ｜ blank-reviewer 0 ｜ rejected 0 ｜ replay 0 ｜ different-key 0
+⭐ status-write-failure 0（「**status write failed atomically**」）
+⭐ recovery-same-key 0 ｜ ⭐ key-collision 0（「**rejected; five tables unchanged**」）
+⇒ ⭐ **九个全过 ⇒ 我的 `service.py` 改动没弄坏任何一条** ✓
+```
+
+## ⚠️ 三处我这一轮的失误
+
+```
+⚠️ 一：**我在 SUBMISSION 里说 `state-handoff-review` Skill 不存在** ⇒ **错了 ✗ 已更正** ✓
+⚠️ 二：**第一次跑九个模式时 `approved`/`replay` 报退出码 2** ✗
+   ⇒ **真因**：`error: **use a new report path; preserve previous evidence**` ⇒ **拒绝覆盖** ✓
+   ⇒ ✅ **换新路径 ⇒ 都退出码 0** ✓ **不是回归** ✓
+⚠️ 三：**我抓 `MODES` 的第一次只抓到 3 个（Graph）✗ 7 个（采购）** ✗ 实际 16 / 9 ✓
+```
+
+## ⚠️ 新发现一个缺口
+
+```
+⚠️ **`empty-report`**：**我的实现里报告 0 项 ⇒ `blocking_failed` 为 0 ⇒ 也会进人审** ✓
+⇒ ⭐ **要补"报告必须非空且覆盖清单"的校验** ⇒ **待办** ✓
+```
+
+## 仍待读
+
+```
+⚠️ **PPT**（**L12 的 29 页**）✗ **`reference/参考说明.md`** ✗ **`assets/README.md`**
 ```
