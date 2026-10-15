@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 02:45 +0800
+> 最后更新：2026-10-16 02:46 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -1899,3 +1899,60 @@ $ ./.venv/bin/python -X utf8 -m agent.loop --max-rounds 1 --token-budget 30000
 [ ] ⚠️ 读 `workbench/initiative_workflow.py` 的 `configure_loop`（**缺口 ① 要落在那里**）
 [ ] ⚠️ 读任务创建时"门"从哪来（`task-create` 的 `--spec-path`？还是 `configure_loop`？）
 [ ] ⭐ **然后才写 Loop 建设 Spec**（六段 ✗ 覆盖缺口 ①②③）
+
+
+---
+
+# ⭐⭐⭐ L10 §3 范围（**手册说"参考 CLI 还没有全部具备"** ✓）
+
+## 已有的四层接线（**逐处读过 ✗ 五条测试全过** ✓）
+
+```
+`workbench/repair_loop.py` 95 行 ✗ docstring「**L10 bounded repair-loop projection…**」
+`initiative_workflow.py:377`    data['repair_loop'] = loop_project(…)                视图
+`initiative_workflow.py:672-676` ⭐ rework 那道闸：
+    if stage=='rework' and config.enabled:
+        loop = loop_project(…)
+        if not loop['can_continue']: raise ValueError('Loop 已停止：' + reason + '…handoff…')
+`initiative_workflow.py:390`    configure_loop（**只冻结边界**）
+`delivery_runtime.py:343-360`   bounds→budget ✗ `resume_budget` 跨恢复携带 ✗ 耗尽拒新方案
+`workbench_web/…js:78`          const loop = data.repair_loop || …
+⇒ ✅ `tests/test_repair_loop.py` **Ran 5 tests ✗ OK** ✓
+```
+
+## ⭐⭐⭐ 手册 §3 的六条（**照抄 ✗ 逐条** ✓）
+
+```
+① **个人入口仍用现有 `--max-rounds` ✗ `--timeout` ✗ `--token-budget` ✗ `--codex`**
+   ⚠️⚠️ 「**不要写不存在的 `--case` 或 `--runtime-dir`**」
+   ⇒ ⭐ **推翻我上轮想的"给 loop 加 `--case`"** ✓
+② ⭐ **建设并登记四项**：`l10_personal_legal_ship` ✗ `l10_personal_draft_refusal` ✗
+   `l10_personal_cancelled_refusal` ✗ `l10_personal_repeat_refusal`
+   ✗ 「**控制器显式选择这四项并核对实际报告 ✗ 不能让默认工作台检查替代它们**」
+③ ⭐ 「**只有修改后的原四项检查和该回归都通过 ✗ 控制器才能输出 `converged`；
+   回归失败仍保留失败报告 ✗ 不能先宣称成功再交人改判**」
+④ ⭐⭐ **个人入口读 `本候选/.runtime/l10-run-context.json`** ✗ 验证候选/控制工作台/父任务/
+   业务 Spec/逐文件写集/必需用例 ✗ ⚠️「**参考程序目前没有这个读取能力 ✗ 须在本阶段实现并测试**」
+⑤ ⭐ 改代码经**控制工作台**的 `task-create --workspace … --source-task-id …` 与 `task-run`
+   ✗ ⚠️「**不得直接套用参考 `_run_codex` 的宽泛 workspace-write 当逐文件授权**」
+   ⇒ ⭐ **这解释了为什么有两个 loop**：`agent/loop.py` 的 `_run_codex` 不许用 ✓
+⑥ ⭐ 「**无报告 ✗ 未知用量 ✗ 异常或越界都停止 ✗ 不改写旧结果**」
+   ⇒ ✅ **我列的缺口 ②③ 正落在这里** ✓
+```
+
+## ⚠️ 我在本讲写错的三处（**如实记** ✓）
+
+```
+⚠️ **一**：我说"Loop 报 converged 是假绿"—— ✅ **那件事是真的**（`agent/loop.py` 实测）
+   ⚠️ **但把它当成"L10 的缺口"是错的**：**L10 的目标是 `workbench/repair_loop.py`** ✓
+⚠️ **二**：我想"给 loop 加 `--case`"⇒ ⚠️ **手册第 ① 条明说"不要写不存在的 `--case`"** ✓ **打消**
+⚠️ **三**：我列的缺口 ①「最后一轮仍会修改」⇒ ❌ **错** ✗ **`modified_pending_verification` 已实现** ✓
+```
+
+## 待办
+
+```
+[ ] 写 **Loop 建设 Spec**（六段 ✗ 覆盖五条）✗ **先确认 `.runtime/l10-run-context.json` 在不在**
+[ ] 查 `tests/` 里有没有 l10 相关测试
+[ ] §3 建设（**保持发货仍红**）
+[ ] ⚠️ 待补：**PPT 288 行 ✗ `reference/` ✗ `assets/` ✗ `examples/skills`**
