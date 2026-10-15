@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 02:09 +0800
+> 最后更新：2026-10-16 02:12 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -17,7 +17,7 @@
 | **L05** | 🟡 **§0~§6 完成 ✗ §7.1 页面回填与 §8 具名决定待本人** | 业务/工程两份 Eval ✗ **个人新增断言（变异体验证过）** ✗ 幂等修复 **11→14→14→17** |
 | **L06** | ✅ **§1~§7 完成** | 四处报告 ✗ **假绿→如实报红→必需全绿** ✗ 两次修复 Diff ✗ **独立复验：接受** |
 | **L07** | ✅ **§0~§7 完成（§6.4~§6.6 ✗ 真实同伴 ✗ 具名接受 待本人）** | 八项检查 ✗ 19 项/2 BLOCK ✗ Hook 已装 ✗ 迁移设计 ✗ Skill 自查 |
-| **L08~L16** | ❌ **未开始** | 计划见 `tools/L02-L16-PLAN.md` |
+| **L08** | 🟡 **§1~§4 完成 ✗ §5 本地可做 ✗ §6 远程待本人许可** | 三条实验 ✗ 三层退出码 ✗ **候选已建（gap#8）** |
 | **结营毕设** | ❌ 未开始 | |
 
 **测试**：`Ran 36 tests ✗ OK`（L01 账本 10 ✗ 壳 4 ✗ L02 不变量 3 ✗ L03 解析器 10 ✗ **L04 V0 9**）
@@ -945,4 +945,79 @@ L07 `examples/skills/hook-evidence-review/SKILL.md`（**18 行 ✗ 七个反例*
 10-install.md                §6.1~§6.3（**路线 B ✗ 五项重测**）
 11-review-and-migration.md   §7 迁移设计 ✗ Skill 自查 ✗ §7.1
 SUBMISSION.md                九节模板
+```
+
+
+---
+
+# ⭐ L08 §1~§4（**把同一套 Eval 接入 CI**）
+
+## §1 环境
+
+```
+控制工作台 `.venv` ⇒ `/home/rchua/GO/CodexFDE/.venv/bin/python` ✓
+独立 FlowERP ⇒ `/home/rchua/GO/flowERP-customer`（**工作台能定位** ✓）
+  ⚠️ 第一次跑 `flowerp_root()` 失败 ⇒ **设 `FLOWERP_PROJECT_ROOT` 后通过** ✓
+控制仓 git: HEAD `342ab9b0…` ✗ status **0 项** ✓
+```
+
+## ⭐ §2 三条实验（**全部与手册预期一致 ✗ 退出码都是 0** ✓）
+
+| 模式 | `status` | `reserved` | `available` | `all_observed_tables_unchanged` |
+|---|---|---|---|---|
+| **pass** | **reserved** | **[2,3]** | **[3,2]** | `false`（本来就该变）|
+| **shortage** | **confirmed** | **[0,0]** | **[5,2]** | ⭐ **true** |
+| **write-error** | **confirmed** | **[0,0]** | **[5,5]** | ⭐ **true** |
+
+### ⭐⭐ §2.1 教师错误实现：**"订单仍是 confirmed"为什么不足以通过**
+
+```
+stock_balance         reserved **0→2** ✗ outgoing **0→2** ✗ version 2→3    ⚠️ 变了
+stock_reservations    **0 行 → 1 行**                                    ⚠️ 变了
+sales_document_lines  reserved_quantity **0→2**                          ⚠️ 变了
+sales_documents       ⇒ ⭐ **完全未变** ✗ status='**confirmed**'           ✓
+⇒ ⭐⭐ **"订单状态"是四张表里唯一没变的那张** ⇒ **只查它 ⇒ 三张表的残留全漏** ✓
+```
+
+## ⭐⭐ §3 本地机制实验：**A 与 B 的 `summary` 完全相同**
+
+```
+我的 ci_signal_lab（**教学用例** ✗ `evidence_kind=local_harness_with_teaching_case`）：
+  false-green  外层 **0** ✗ harness **1** ✗ adapter **0**
+  true-red     外层 **1** ✗ harness **1** ✗ adapter **1**
+  true-green   外层 **0** ✗ harness **0** ✗ adapter **0**
+  ⇒ ⭐ **false-green 与 true-green 的外层退出码一模一样（都是 0）** ✓
+
+课程的真实产品索引 `product-abc-index.json`（**⚠️ `real_remote_run: False`**）：
+  A-false-green  harness 1 ✗ adapter **0** ✗ summary {total:3, passed:2, blocking_failed:1, decision:**block**}
+  B-true-red     harness 1 ✗ adapter **1** ✗ summary {total:3, passed:2, blocking_failed:1, decision:**block**}
+                 ⭐⭐ **与 A 逐字段相同**
+  C-true-green   harness 0 ✗ adapter **0** ✗ summary {total:3, passed:3, blocking_failed:0, decision:**pass**}
+⇒ ⭐⭐⭐ **A 与 B 只差 `adapter_exit` 一个数字** ✗ **`summary` 与 `decision` 一字不差** ✓
+⇒ ⭐ **判据可以写死**：
+   **修传播成功 ⇔ `summary` 不变 ✗ `adapter_exit` 0→1**
+   **修业务成功 ⇔ `blocking_failed` 归零 ✗ `decision` 变 pass**
+   ⚠️ **两者混在一起改 ⇒ 两个都证明不了**（**手册的两条禁令** ✓）
+```
+
+## §4 候选（**退出码 0** ✓）
+
+```
+course-contract --lesson 8 ⇒ write_scope 含
+  **`.github/workflows/`** 与 **`workbench/ci_evidence.py`**（**本讲新增两项**）
+  acceptance 第三条：⭐ **"本地与 CI 使用同一 Eval 身份。"**
+course/l08-start = `ff2564c93928010a648bd3e781caf0e7641f83cd`
+course-prepare ⇒ `TASK-PREP-L08-20261016021155` ✗ 1000 文件
+  gap#8 "**原子预占与 CI 证据信封**" ✗ honest_failure "**缺货留下部分预占或假绿信封**"
+  overlays `['flowerp/sales.py','workbench/ci_evidence.py']` ⇒ **两个注入缺陷** ✓
+```
+
+## 🚩 下一步必须问你的一件事
+
+```
+§5 配置 CI 候选（`.github/workflows/`）⇒ ✅ **本地文件 ✗ 我能做** ✓
+§6 「**在自己的远程仓库完成 A/B/C**」⇒ 🚩 **推分支 ✗ 开 PR ✗ 看真实 Run**
+   ⇒ ⭐ **那是你的仓库上的外部动作 ✗ 未经你许可我不做** ✓
+⇒ ⚠️ **手册**：「**没有真实 Run 时如实保留待验证 ✗ 不用本地结果代填。**」✓
+⇒ ⭐ **所以 L08 的 §6 与 §7 会停在"待你在远程仓库上执行"那一步** ✓
 ```
