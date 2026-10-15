@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:31 +0800
+> 最后更新：2026-10-16 03:32 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -3885,3 +3885,69 @@ if not isinstance(results, list) or not results:
 ```
 
 ## 🚩 仍待你（累积六件，同前）
+
+
+---
+
+# ⭐⭐⭐ L13 §2~§3 完成：**两个参考实验 ✗ 真进程重启**
+
+## §2 `task_api_lab.py`（**退出码 0 ✗ `verified: true`** ✓）
+
+```
+⭐ **十项观察** ✗ 手册点名的四项逐条对上：
+  `accepted_before_eval_finished` ⇒ `{"http": **202**, "response": {"task_id": "**TASK-BA6370C790**"}}`
+  `running`                       ⇒ `{"status": "**evaluating**"}`
+  `same_key_same_body`            ⇒ `{"task_id": "**TASK-BA6370C790**", "spec_count": 1}`
+  `real_eval_waiting_review`      ⇒ `{"status": "**review**"}` ✗ `reviewed_by` 未填 ✓
+⭐ **另外六项**：
+  `key_conflicts` ⇒ **`409` × 3**（改 `request`/`actor`/`business_refs`）✗ **没新建**
+  ⭐⭐ `code_mode_rejected` ⇒ **`400`**「**网页API只允许verify；代码执行须使用明确授权的课程CLI**」
+     ⇒ ⭐⭐⭐ **正是合同的"持久化和**最小权限**"**
+  `missing_task` ⇒ **`404 not_found`**（**不是空成功**）
+  ⭐ `event_version` ⇒ `{"before": 5, "after": 5, **event_count 9 → 10**}`
+     ⇒ **状态版本没变 ✗ 事件 +1** ⇒ **正是「状态决定下一步 ✗ 事件解释怎样走到这里」**
+  `concurrent_reviews` ⇒ **`400` 非法状态迁移** ✗ 然后 `200`
+  `completed_reopened_store` ⇒ `completed`（**但那只算"重开存储"** ✗ 不算进程重启）
+⭐ **顶层四个诚实性字段**：`basis: "reference_localhost_real_eval"` ✗
+   `real_codex_execution: false` ✗ `student_achievement: false` ✗ `erp_increment_proven: false`
+   ⇒ **正是「verify 实验不冒充真实 Codex 新增功能」**
+```
+
+## ⭐⭐⭐ §3 真重启（**两条都 `verified: true`** ✗ 硬证据在 PID 与信号号）
+
+```
+3.1 `audit_task_recovery`：
+  `accepted` ⇒ `TASK-AE77D31753` ✗ `before` ⇒ **`evaluating`**
+  ⭐⭐ `terminated_pid: **695879**` ✗ `terminated_returncode: **-9**` ⇒ **SIGKILL**
+  `after` ⇒ **`review`** ✗ `error: "**服务重启时任务停在 evaluating ✗ 已转入安全重放**"`
+3.2 `completed_restart_lab`（**三个服务进程**）：
+  `terminated_pid: 695907` ✗ `-9`（**SIGKILL ✗ 中断**）
+  `completed_before_restart` ⇒ **`completed`**
+  `completed_service_exit: {"pid": 695911, "returncode": **-15**}`（**SIGTERM**）
+  ⭐ `completed_after_restart` ⇒ **`completed`** ⇒ **完成记录没丢**
+  ⭐ `restarted_service: {"pid": 695941, "http": **200**}`
+⇒ ⭐⭐⭐ **三个 PID ✗ 两种信号 ✗ "真重启"不是我说的 ✗ 是信号号说的**
+```
+
+## ⭐ 两份 audit 的 `basis` ✗ 诚实性
+
+```
+`basis: "**maintainer_process_interruption**"` ⇒ **维护者制造进程中断**（**不是真断网 ✗ 不是真崩**）
+`student_achievement: false` ✗ `real_codex_execution: false` ✗ 3.2 还有 `human_acceptance: false` ✓
+```
+
+## ⚠️ 手册的关键告诫
+
+```
+「**`verify` 模式只做检查；**修改代码 ✗ 入库等有副作用的动作 ✗ 必须先核对执行身份和实际结果 ✗
+  再决定是否重放****」
+⇒ ⚠️ **两条 audit 都是 `execution_mode: "verify"`** ⇒ **没有副作用动作**
+   ⇒ ⭐ **所以它们**不能**证明"入库也能安全恢复"** ⇒ **留给 §5 的真实采购** ✓
+```
+
+## 下一步
+
+```
+[ ] **第 4 步：在自己的候选里实现两个接口** ⇒ **先看候选里已有什么**
+[ ] **§5 真实采购与库存核对**（**要证有副作用的动作**）✗ **§6 同伴复验 ✗ 迁移**
+```
