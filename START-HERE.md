@@ -1,0 +1,143 @@
+# START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
+
+> **写给下一个会话 —— 读完这一份就能接手。**
+> 最后更新：2026-10-16 01:10 +0800
+> ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
+
+---
+
+## 一、进度（**2026-10-16 清空重来之后**）
+
+| 讲 | 状态 | 关键产物 |
+|---|---|---|
+| **L01** | ✅ **§1~§8 完成** | 五个账本命令 ✗ `bootstrap.py` 274 行 ✗ 红→Diff→绿三条原始记录 |
+| **L02** | ✅ **§1~§6 完成**（**§7 待本人签**）| `AGENTS.md` 5 → 99 行 ✗ N0/N1 对照 ✗ 补了 3 条不变量 |
+| **L03** | ✅ **8/8 检查通过** | `spec.py` 134 行 ✗ 六段模板 ✗ `FDE_SPEC.md` ✗ 三份输入复验 |
+| **L04** | 🟡 **§1~§3 完成 ✗ §4 独立复验在跑** | `task_store.py` 158 ✗ `execution.py` 219 ✗ CLI 204 行（**11 个命令**）|
+| **L05~L16** | ❌ **未开始** | 计划见 `tools/L02-L16-PLAN.md` |
+| **结营毕设** | ❌ 未开始 | |
+
+**测试**：`Ran 36 tests ✗ OK`（L01 账本 10 ✗ 壳 4 ✗ L02 不变量 3 ✗ L03 解析器 10 ✗ **L04 V0 9**）
+⚠️ **L04 的绿灯要 30 秒** —— **A-08 的超时用例真的在等 30 秒**（不是卡住）
+**提交**：起点 `be6024e`（**只有课程壳**）✗ **其后成果尚未提交**
+
+## 二、每讲开工前必读（**七项 ✗ 缺一不可 ✗ 不靠记忆**）
+
+```
+① docs/courses/LNN/README.md          ← 结构在这里，跳过会漏关键约束
+② docs/courses/LNN/辅导资料.md         ← 为什么
+③ docs/courses/LNN/实践操作手册.md     ← 怎么做（按步走，到停点才停）
+④ docs/courses/LNN/SUBMISSION.md       ← 证据字段
+⑤ /tmp/ppt-text/LNN.txt               ← PPT 文字（**本人要求与仓搭配看**）
+⑥ 按需材料 examples/ scripts/ reference/ assets/
+⑦ 执行 → 留原始证据 → 更新 lesson-NN-submission/ → 更新本文件
+```
+**完成判据**：`grep -n '完成条件\|看到什么才算完成\|逐项核对\|通过标准' <手册>`
+
+## 三、可直接复用的手法（**L01~L03 验证过 ✗ 踩过坑的**）
+
+```
+· 红/ Diff / 绿灯**必须按这个顺序采集**（observed_at 严格递增）—— 否则完整性检查拒
+· 用 `docs/courses/L01/tools/evidence.py {red,diff,green,observation} -- <命令>`
+  ⚠️ **L03 及以后没有自己的 tools ✗ 用 L01 的 ⇒ 记录会落进 lesson-01-submission/**
+     ⇒ **复制到本讲目录 ✗ 原件保留**（见 lesson-03-submission/03-failure/README.md）
+· **手写 meta.json 无法被 import_evidence.py 读取** —— 必须用工具采
+· **换课程编号**：`bash tools/rebuild-bootstrap.sh <真实编号>`（一条命令重建 §6/§7）
+· 防伪造检查会拒 `待确认` / `agent:` 前缀 —— **不要绕过**
+· **写 Markdown 不要用未加引号的 heredoc**（bash 会执行反引号 ⇒ 文件被写坏，我踩过 3 次）
+· **非交互终端跑不了 `input()` 提示** ⇒ 用等价显式传参
+· ⚠️ **子代理的输出路径要先清空**：`/tmp/xxx-answer.md` 可能有**旧一轮的残留**，
+  否则会把旧结果当成新的（**我差点犯过** ⇒ 先 `mv` 走旧文件）
+```
+
+## 四、只有本人能给的（**不要代签**）
+
+```
+【待本人】1. **课程编号** —— 手册：两处填**同一真实编号**
+           现在账本里是 `KA-2026-0001`（**我用的测试值 ✗ 要换**）
+【待本人】2. L01 `01-problem.md` 的「开发前真实想法」正文
+           （**手册：不替我编写经历、理由或个人答案**）
+【待本人】3. **Spec / 合同签署**（L01 ✗ L03 都还是 draft）
+【待本人】4. **同伴或教师复核**（L02 §7 ✗ L01 §8 ✗ L03 交接检查）
+           ⇒ 本会话用**子代理模拟"新会话"** ✗ **不是真人同伴** ✗ 已如实标注
+```
+
+## 五、硬约束
+
+```
+· 不改 FlowERP 仓库（`~/GO/flowERP-customer` ✗ 至今 0 改动）
+· 不改课程材料（`~/GO/CodexFDE` 只读）
+· 不把参考仓库源码整份复制进个人项目
+· 红灯必须用课程工具采集；「不倒填缺失的起始证据」
+· 不删除功能制造红灯；「已有能力通过时如实记录」
+· 不把"停止"写成"自动回滚"
+· 解释器：`~/GO/CodexFDE/.venv/bin/python`（3.11.16）—— **不用系统 python3**
+```
+
+## 六、本讲目录清单
+
+```
+workbench/    bootstrap.py 274 ✗ cli.py 143 ✗ spec.py 134 ✗ workbench_server.py（L00 壳）
+             templates/SPEC_TEMPLATE.md 58
+tests/        test_l01_workbench_bootstrap.py 191 ✗ test_l02_status_invariants.py
+             test_l03_spec_parser.py ✗ test_workbench_server.py（L00）
+docs/courses/L01/WORKBENCH_SPEC.md ✗ docs/courses/L03/FDE_SPEC.md
+lesson-01-submission/  红→Diff→绿 ✗ 06-bootstrap.md ✗ SUBMISSION.md
+lesson-02-submission/  N0/N1 原始回答 ✗ 对照 ✗ agents-before/after
+lesson-03-submission/  decisions ✗ FDE_SPEC ✗ 模板 ✗ 采购草稿 ✗ evidence ✗ 三份输入
+tools/        rebuild-bootstrap.sh ✗ L02-L16-PLAN.md
+```
+
+
+---
+
+# ⭐ L04 进度（**Ticket A ✗ 两张任务单**）
+
+## 手册的**唯一顺序**
+
+```
+A 建设 → A 独立复验 → B 执行 → B 独立复验
+⚠️ **A 没有通过 ✗ 不启动 B**；**B 自动检查变绿 ✗ 也不能跳过人工验收**
+```
+
+## 进度
+
+```
+§1   ✓ 证据区（4 个文件）+ 检查支架 217 行（sha 0370495edbc6384c…）
+§2   ✓ Ticket A 的六段合同（113 行）✗ **能被工作台解析**（退出码 0 ✗ 三条正常结果全对）
+§3.0 ✓ 只读调查：八项能力 ① ✅ ② ⚠️ ③~⑤ ❌ ⑥ ⚠️ ⑦ ❌ ⑧ ✅
+     ✗ 参考实现 execution.py 697 行的三个接口契约已读出并对齐
+§3.1 ✓ 测试 9 条（A-01~A-09）✗ **红灯 Ran 9 / failures=9 / invalid choice: 'task-create'**
+§4   ✓ 实现：
+        workbench/execution.py 219 行（**能力信封 ✗ 写集 ✗ 超时 ✗ Diff**）
+        workbench/task_store.py 158 行（**Spec 绑定 ✗ 任务 ✗ 状态 ✗ 人审**）
+        workbench/cli.py 204 行（**11 个命令**）
+        ✗ **绿灯 Ran 9 / OK**
+§4   🟡 **非执行者独立复验在跑**（**子代理 `bab03d87-…` ✗ 工作区 /tmp/l04-verify**）
+§5~§7 ❌ 未做（**B 要等 A 被接受**）
+```
+
+## ⭐ 与参考实现逐条对齐的证据
+
+```
+normalize_write_scope 的 9 个非法输入全部拒绝（正确错误码）
+validate_v0_authorization 5 种非法全拒 ✗ **并拒绝把工作台源仓库当候选**
+常量一致：timeout **30..3600** ✗ 受保护目录 ['.codex','.git','.runtime','.tmp','__pycache__']
+```
+
+## ⚠️ 仍未建的一块
+
+```
+❌ **`eval/harness.py`** —— Ticket A 的"最小 Eval 与报告汇总"还没建
+   现在只有 execution.py 里的**写集检查** ✗ **没有独立的检查汇总与出口码**
+⇒ 复验结束后立刻补 ✗ ⚠️ **补了就是"控制源码变化" ⇒ 复验结论要重做**（手册的规矩）
+```
+
+## ⚠️ 一处必须说清的
+
+```
+⚠️ **本机没装 Codex CLI**（WSL 与 Windows 侧都没有 ✗ 没有 OPENAI_API_KEY）
+⇒ `run_candidate` 跑的是**给定的命令** ✗ **不是真的 `codex exec`**
+⇒ Ticket A 的"实际调用 Codex"这一环 **在我这里是等价物 ✗ 不是原生调用**
+⇒ **手册允许多少要看本人判断** ✗ 如实标注
+```
