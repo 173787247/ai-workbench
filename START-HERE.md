@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 02:58 +0800
+> 最后更新：2026-10-16 03:00 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -2199,3 +2199,51 @@ cd <stop-candidate> && python -B -X utf8 -m agent.loop --max-rounds 1 --timeout 
 [ ] ⚠️ Spec 的 `acceptance` 措辞改（**复制品无 `.git` ⇒ 两项环境性红消不掉**）
 [ ] **写 `SUBMISSION.md`**（五节模板）✗ 读 PPT 288 行 ✗ `reference/` ✗ `assets/` ✗ `examples/skills`
 [ ] 🚩 **具名接受 ✗ 同伴反证** ⇒ **待本人**
+
+
+---
+
+# ⭐ L10 九项必读补齐
+
+## ⭐⭐ `reference/参考说明.md` 修正了我一处措辞
+
+> 「**控制实验的空报告是注入反例 ✗ 不表示默认 Harness 会正常产生空绿灯。**」
+
+⇒ ⚠️ **我在 `11-control-paths.md` 里说"参考留了一个洞"** ✗ **措辞偏了** ✓
+   ⇒ ✅ **已改成**：**"参考把这一种输入注进来当反例 ✗ 我按手册第 ⑥ 条把它判成停"** ✓
+
+## ⭐⭐⭐ Skill `loop-stop-review` 逐句对上
+
+```
+⭐⭐ 「**确认报告有效且覆盖独立要求；空列表不证明通过。**」⇒ 我的 `stopped_invalid_report` ✓
+⭐⭐ 「**定位停止前最后一次检查对应的候选 ✗ 若随后仍有修改 ✗ 保留待复验。**」⇒ 我的 `stopped_max_rounds` ✓
+⭐⭐ 「**对"全部拒绝使反例通过"的方案 ✗ 指出正常用途损失。**」⇒ 我的 `legal_ship` 就是那个守卫 ✓
+⭐⭐ 「**不代替负责人接受 ✗ 不自动继续执行或扩大预算。**」
+   ⇒ ⚠️ **我自动建任务并执行了修复** ⇒ **依据本人长期授权 ✗ 已标注 ✗ 不代签** ✓
+⭐⭐ 「**`use_codex=True` 不能独立证明调用了 Codex。**」⇒ 与 L05 那条同源 ✓
+```
+
+## ⭐⭐ 三条候选轨迹 ✗ 五个订单实验（**都逐字复现**）
+
+```
+candidate_loop_lab：repair ⇒ converged(2) ｜ no-change ⇒ stopped_no_progress(2)
+                    ｜ last-repair ⇒ stopped_max_rounds(1) ⇒ **与手册末段的表一致** ✓
+order_transition_lab：legal/draft-ship/cancelled-ship/double-ship ⇒ **退出 0**
+                    ｜ ⭐ refuse-all ⇒ **退出 1**
+                      「**TEACHING defect: all shipping rejected, including reserved**」
+   ⭐ `legal` 的 **6/2/4** 正是手册 §2 的数字 ✗ **与 `assets/README.md` 那句逐字对上** ✓
+```
+
+## ⚠️ 九项里仍缺的
+
+```
+⚠️ **PPT 288 行逐节对照** —— **唯一完全没做的**
+⚠️ `skills/references/review-cases.md` 未读 ✗ **如实记**
+```
+
+## 🚩 L10 待本人
+
+```
+**具名接受**（`task-review`）✗ **同伴反证**（**Skill：不代替负责人接受** ✓）
+⇒ 另：**事项编号 ✗ 构建者署名**用的是默认值 ✓
+```
