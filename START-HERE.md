@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:44 +0800
+> 最后更新：2026-10-16 03:45 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -4456,4 +4456,87 @@ tests/test_http_api.py:185  assertEqual(201, status)
 [ ] ③ 新增 eval/cases.py 用例，注册到 harness.py:110 mods，先红后绿
 [ ] ④ §5 真实采购核对 ｜ §6 同伴复验与迁移
 [ ] ⑤ test_http_api:185 的 201 != 410 ⇒ 要么它过时，要么实现该回 8001（同第 0 项）
+```
+
+---
+
+# ⭐⭐⭐⭐ L13：真 HTTP 验收（socket，不是 dispatch()）
+
+## 这次的方法与前几轮的差别
+
+```
+前几轮：直接调 api.dispatch() 拿到 PlatformResponse 就说「测过了」
+   ⇒ 少了三样：socket、HTTP 状态行、头部的真实编码
+这次：ThreadingHTTPServer 真监听 127.0.0.1:44955，http.client 走 socket
+   ⇒ 判据是 Connection 返回的响应对象
+⇒ 手册 §2.1：「程序自己启动临时 HTTP 服务，提交请求，查询任务…# 结束后关闭服务」⇒ 这次做到了
+```
+
+## 八条实测（全部通过）
+
+```
+① POST /api/v1/tasks              ⇒ HTTP 202，task_id TASK-FBCE8D8CBB
+   ⭐ accepted=True ｜ status_url=/api/v1/tasks/TASK-FBCE8D8CBB
+   ⭐ view_url=/api/v1/delivery/views/TASK-FBCE8D8CBB
+② 同键同内容                       ⇒ HTTP 202，⭐ 同一个 ID: True
+③ 同键异内容                       ⇒ HTTP 409，{"error":"conflict","message":"同一个 Idempotency-Key 不能用于不同请求"}
+④ GET /api/v1/tasks/<id>          ⇒ HTTP 200，status=queued
+⑤ GET /api/v1/delivery/views/<id> ⇒ HTTP 200，schema=workbench.delivery-view/v1
+   ⭐ human_decision_recorded=False
+   next_action={"action":"wait","label":"等待检查完成","reason":"任务已受理，检查尚未结束"}
+   ⇒ 正合辅导资料 §1：「202 表示请求已受理，不能推断代码已经完成」—— 视图说「检查尚未结束」
+⑥ GET /api/v1/tasks/TASK-MISSING0 ⇒ HTTP 404
+⑦ 网页入口带 execute_code: true   ⇒ HTTP 400
+   {"error":"code_mode_rejected","message":"网页API只允许verify；代码执行须使用明确授权的课程CLI"}
+   ⇒ 与参考实验逐字一致 ⇒「最小权限」补上了
+⑧ 不给 Idempotency-Key            ⇒ HTTP 422「写操作必须提供 Idempotency-Key」
+```
+
+## 两条只有真 HTTP 才看得见的新发现
+
+### ① HTTP 头必须是 latin-1 ⇒ 中文操作者名发不出去
+
+```
+⚠️ UnicodeEncodeError: 'latin-1' codec can't encode characters in position 0-1
+   ⇒ X-Workbench-Actor: 林舟 在 http.client 就失败了
+⇒ 这是协议层的限制，不是代码的 bug
+  ⇒ 但后果是真的：写操作的具名操作者只能是 ASCII（_write_identity 正是从那个头读）
+⇒ 我改用 LinZhou 跑通，并如实记
+  ⇒ ⚠️ 如果课程要求中文姓名，那就需要另一条通道 ⇒ 记录为待定，不擅自改协议
+```
+
+### ② 后台投递线程崩了 ⇒ 任务停在 queued
+
+```
+⚠️ Exception in thread delivery-TASK-FBCE8D8CBB:
+   FileNotFoundError: [Errno 2] No such file or directory: 'python'
+   栈：automation._execute ⇒ agent_loop ⇒ tools/builtin.py:37 evaluate_task
+     ⇒ workflow.py:81 suite_runner ⇒ project_runner.py:56 subprocess.run
+⇒ 是真观察，不是我的代码错：项目登记的 eval_command 用了 "python"，
+  而那个子进程的 PATH 里没有 python（只有 python3）
+  ⇒ 后果：后台投递线程异常退出，任务永远停在 queued
+    ⇒ 而 HTTP 层完全正常：202、status_url、查询都在
+      ⇒ ⭐ 这正好演示辅导资料 §1 的三层事实：
+        「工作台受理研发请求」成功，而「研发候选检查与审核」根本没开始
+        ⇒ 接口没假装完成，它就停在「已受理」
+⇒ 修法：eval_command 用 sys.executable 或 python3；但那是项目登记的事，
+  我的探针自己登记的 ⇒ 这是我探针的配置问题，不是产品缺陷 ⇒ 如实区分
+```
+
+## 为什么这次值得
+
+```
+⚠️ 前几轮我调 dispatch() 就说测过 ⇒ 少了 socket、HTTP 状态行、头部真实编码
+⇒ 而这次三样都在 ⇒ 立刻发现两条前几轮看不见的东西
+⇒ 这就是「要求更强的检查」的价值：它不只是更正式，它看得见更多
+```
+
+## 待办
+
+```
+[ ] platform_api 侧的四条已真 HTTP 验过；但 submit_key（加在 task_store）还没有调用方
+    ⇒ 要判断在 8010 这条路接不接 ⇒ 与「落在哪一侧」同一个问题
+[ ] 新增 eval/cases.py 用例，注册到 harness.py:110 mods，先红后绿（用例要覆盖这八条，且用真 HTTP）
+[ ] §5 真实采购核对 ｜ §6 同伴复验与迁移
+[ ] 🚩 待本人定（七件）之第 0 件：两个最小入口落 8010 还是 8001
 ```
