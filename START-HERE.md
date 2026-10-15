@@ -9007,3 +9007,63 @@ F 区：先保存 E 区提交 SHA，再回控制实例；新增名称必须逐�
 [ ] 🚩 待本人：首页实际事项编号、原工作台运行目录、本人六段 Spec 路径、实际构建者姓名、
     已确认的实现写集、现场需求抽取、答辩、人审
 ```
+
+---
+
+# 🔍 L16 写集收窄到四处
+
+## 库存页现在的样子
+
+```
+web/index.html:147~150 库存区有五个标签页（balances/ledger/counts/serials/reorder）
+  balances 面板是 <div class="table-scroll" id="inventory-table"></div>
+  ⇒ 没有搜索框
+web/app.js:314 async function renderInventory() { … state.inventory = result[0].items; }
+  ⇒ grep inventoryKeyword 为空 ⇒ 这个候选连过滤都没有
+```
+
+## api_v2.py 的路由
+
+```python
+:471  if path == "/api/v1/inventory/balances" and method == "GET":
+:472      return APIResponse(200, {"items": self.inventory.list_balances(
+              principal, query.get("site_id",""), query.get("product_id",""),
+              query.get("low_stock","false")=="true")})
+⇒ 接受 site_id、product_id、low_stock，没有关键词
+```
+
+## 本次写集（四处，最小可行）
+
+| 文件 | 改什么 | 依据 |
+|---|---|---|
+| ⭐ flowerp/inventory.py | list_balances 加 keyword，在当前组织范围内匹配商品名，再分页 | 「先取一页再筛选会漏项；先读全库再在页面隐藏会泄漏数据」 |
+| ⭐ workbench/api_v2.py | /api/v1/inventory/balances 接 keyword 并传给业务层 | 「页面与直接接口调用必须遵守同一业务规则」 |
+| ⭐ web/index.html | balances 标签页加搜索框（输入、按钮、空结果容器） | 「展示查询中、结果、空结果与失败」 |
+| ⭐ web/app.js | 把关键词发给 API，不再全量渲染 | 「避免旧列表冒充新结果」 |
+
+⇒ eval/ 属于冻结检查，不在实现写集里；tests/ 要看 G 区再定
+
+## 检查设计的要点
+
+```
+⚠️ 辅导资料第 1 条在本候选上不能靠「找出错误实现」来验：
+   「本组织『蓝色螺栓』在第 2 页，当前只加载第 1 页；查询『螺栓』⇒ 返回该商品 ID」
+   ⇒ 因为候选没有「只加载第 1 页」这件事（它一次拿全部）
+     ⇒ 判据要改成结果正确性：造 N 个商品、让目标落在分页边界之后、用关键词查 ⇒ 必须返回它
+       ⇒ 而错误实现（在已加载数组上 filter）会漏项 ⇒ 这才是「让错误实现产生不同结果」
+✗ 另三条能直接照抄：跨组织（含 API 原始响应）、只读（查前后库存与账本不变）、
+   空结果（明确提示，没有旧列表残留）
+```
+
+## 待办
+
+```
+[ ] ⭐ 读 G 区（独立 Eval，看它对 --report-path 与测试的要求）
+[ ] ⭐ 读 H/I/J（产品预览、测试/Loop/Graph、正式 Task 人审）
+[ ] ⭐ 读 K/L/M（独立恢复实验、结果导出与索引、合同最终入口）
+[ ] ⭐ 写 L16 的六段 Spec（新增 Eval 名、写集四处、验收四条）
+    ⇒ 建检查候选 ⇒ 加用例 ⇒ 跑旧绿新红 ⇒ 冻结提交（D/E 区）
+    ⇒ 然后 course-submit（F 区，会另建正式候选）
+[ ] 🚩 待本人：首页实际事项编号、原工作台运行目录、本人六段 Spec 路径、实际构建者姓名、
+    已确认的实现写集、现场需求抽取、答辩、人审
+```
