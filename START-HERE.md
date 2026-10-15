@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:00 +0800
+> 最后更新：2026-10-16 03:01 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -2247,3 +2247,53 @@ order_transition_lab：legal/draft-ship/cancelled-ship/double-ship ⇒ **退出 
 **具名接受**（`task-review`）✗ **同伴反证**（**Skill：不代替负责人接受** ✓）
 ⇒ 另：**事项编号 ✗ 构建者署名**用的是默认值 ✓
 ```
+
+
+---
+
+# ⭐ L10 PPT 对照 ✗ 两个计数补齐
+
+## ⭐⭐⭐ PPT §02 的表 = 我四项检查的判据
+
+```
+创建后            **10 / 2 / 8**   draft
+预占 TARGET 4 件  **10 / 6 / 4**   reserved
+发走 TARGET 4 件  ⭐ **6 / 2 / 4**  shipped  ← **lab `legal` 的输出就是它**
+非法状态请求       **四表不变**      **必须拒绝 ✗ 不能只核对错误文字**
+⇒ ⭐ 我的 `legal_ship` 断言第三行 ✗ 三项 `*_refusal` 断言第四行 ✓
+⇒ ⭐⭐ **我的收窄（`except InvalidTransition` ✗ 不是 `Exception`）正合"不能只核对错误文字"** ✓
+```
+
+## ⭐⭐⭐ PPT §03 说出了我一处缺口 —— **已补**
+
+```
+> 「**"rounds=2"不等于 Codex 已经修改两次 ✗ 记录中要同时保留
+>   `check_count` 和 `repair_count`。**」
+⇒ ✅ 补上（**两个计数点：检查处 +1 ✗ 执行器调用前 +1** ✓）
+⇒ ⭐ **§6 重跑：`check_count 1` / `repair_count 0` / `rounds 1` / `tokens_used 0`**
+   ⇒ **与 PPT 表"检查 1/修复 0"同形 ✗ 而我的会停** ✓
+⇒ ⚠️ **参考的 `last-repair` 是"1/1"**（**允许末轮改 ✗ 标待复验** ✓）
+   ⇒ **手册 §2 说两种设计都可以** ✗ **我选"末轮不改"**（**§6 那句** ✓）**记明** ✓
+```
+
+## ✅ 改完三项复核
+
+```
+① 三份 `agent/loop.py` md5 一致：`8dcebf1a0e4e4e16da063c3fb105a23e` ✓
+② 17 条不变量测试 **OK** ✓ ｜ ③ §6 重跑：1/0 ✗ 业务源码未动 ✓
+```
+
+## ⭐ 九项清单 **本轮全部完成**
+
+```
+[x] README ✗ 辅导资料 ✗ 手册（§1~§6）✗ **PPT 288 行** ✗ reference/ ✗ assets/
+[x] examples/ 三套（**loop_control 十二模式** ✗ **candidate_loop 三模式** ✗ **order_transition 五模式**）
+[x] examples/skills/loop-stop-review/SKILL.md
+⚠️ `skills/references/review-cases.md` 未读 ⇒ 如实记
+```
+
+## 待做
+
+```
+[ ] **写 `SUBMISSION.md`**（五节）✗ ⚠️ 改 Spec 的 `acceptance` 措辞
+[ ] 🚩 **具名接受 ✗ 同伴反证** ⇒ 待本人
