@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 02:44 +0800
+> 最后更新：2026-10-16 02:45 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -1830,3 +1830,72 @@ $ ./.venv/bin/python -X utf8 -m agent.loop --max-rounds 1 --token-budget 30000
 [ ] 读 `tests/test_repair_loop.py`（**已有测试断言了什么**）
 [ ] 写 **Loop 建设 Spec**（六段 ✗ 覆盖第 0~3 位缺口 ✗ 只授权 `agent/` ✗ `tests/`）
 [ ] §3 建设（**保持发货仍红** ✗ 先不修业务）
+
+
+---
+
+# ⚠️⚠️ L10 §2 续（**我分析错了模块 ⇒ 已修正** ✓）
+
+## 事实：候选里有**两个** Loop
+
+```
+① `agent/loop.py`（114 行）        `run_loop` ✗ `_signature` ✗ CLI `--max-rounds`   ← **我上轮测的**
+② ⭐ `workbench/repair_loop.py`（95 行）  `validate_config` ✗ `project`
+   docstring：「**L10 bounded repair-loop projection for an initiative delivery history.**」
+   ⭐⭐ **它自己写着 L10** ✗ 而 `tests/test_repair_loop.py:5` 导的就是它 ✓
+⇒ ⚠️ **我把 `agent/loop.py` 当成了 L10 的目标** ✗ **错了** ✓
+```
+
+## ⭐⭐ `repair_loop.project` 的决策链（**顺序 ✗ 照抄** ✓）
+
+```
+1  verified ✗ 无失败 ✗ status∈{review,completed}  ⇒ **converged**
+2  not verified ✗ changed_files 非空              ⇒ ⭐ **modified_pending_verification**
+3  usage_missing                                  ⇒ stopped_token_usage_unavailable
+4/5  token / time 预算                            ⇒ stopped_token_budget / stopped_time_budget
+6  **相邻两轮失败名单相同**                        ⇒ stopped_no_progress
+7  len(history) >= max_rounds                     ⇒ stopped_max_rounds
+8  其他                                           ⇒ continue
+`handoff.next_action`：「**先核对最后候选 ✗ 原始报告与 Diff ✗ 再由具名负责人决定
+  复验 ✗ 缩小范围或停止。**」← ⭐ **"停止 ≠ 自动回滚"的代码版** ✓
+```
+
+## ⭐ 真正的缺口（**两条 ✗ 加两条次要** ✓）
+
+```
+⭐ **① "跑哪个门"在投影的上游** ——
+   `_blocking` 读 `task["result"]["results"]` ⇒ **由"任务跑了哪个门"决定** ✓
+   若跑默认入口（12 项 ✗ 不含产品用例）⇒ **`_blocking` 返回空 ⇒ 可能判 `converged`** ✓
+   ⇒ ⭐ **落地位置是"任务的创建"✗ 不是 `project`** ✓
+⭐ **② "报告无效"没有状态** —— `verified = isinstance(task.get("result"), dict)`
+   ⇒ ⚠️ **空字典也算"已验证"** ✓（**L06：「报告写出 JSON 只证明有结构化输出」**）
+⭐ **③ "范围不符"没核对** —— `changed_files` **只记录 ✗ 不比 `allowed_files`** ✓
+⚠️ **④ `elapsed` 不含"后置检查还要多久"**（**手册：为执行和后置检查分配剩余时间**）✓
+```
+
+## ⚠️ 我上轮列的**四条里两条不成立**
+
+```
+❌ 「**缺口 ①（最后一轮仍会修改）**」⇒ **不成立**：
+   **`modified_pending_verification` 已实现** ✗ `tests/test_repair_loop.py:59` 在测它 ✓
+✅ 「**没有"报告无效"判定**」✗ ✅ 「**没有"范围不符"判定**」⇒ **成立 ✗ 要写在 `repair_loop` 上** ✓
+```
+
+## ⚠️ 三次同形（**如实记** ✓）
+
+```
+⚠️ 一：只读 `agent/` ✗ 没查 `workbench/` ✓
+⚠️ 二：先看了测试文件（**第 5 行 import 就指对了**）✗ 却去分析 `agent/loop.py` ✓
+⚠️ 三：用 grep 出的行下结论 ✗ 全文里**决策链前两条就推翻了它** ✓
+⇒ ⭐⭐⭐ **共同形状：手边有一条能分辨的信息 ✗ 我先用了印象** ✓
+   ⇒ **与 L09 那八次同族 ✗ 这是第九 ✗ 十 ✗ 十一次** ✓
+⇒ ✅ **三次都靠"再查一次"纠正 ✗ 没把错的写进最终结论** ✓
+```
+
+## 下一步（**改过方法：先读全 ✗ 再写 Spec** ✓）
+
+```
+[ ] 读 `tests/test_repair_loop.py` 剩下的 4 行（74 行 ✗ 我看了 70）
+[ ] ⚠️ 读 `workbench/initiative_workflow.py` 的 `configure_loop`（**缺口 ① 要落在那里**）
+[ ] ⚠️ 读任务创建时"门"从哪来（`task-create` 的 `--spec-path`？还是 `configure_loop`？）
+[ ] ⭐ **然后才写 Loop 建设 Spec**（六段 ✗ 覆盖缺口 ①②③）
