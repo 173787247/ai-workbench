@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:05 +0800
+> 最后更新：2026-10-16 03:07 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -2521,3 +2521,73 @@ blank-reason / duplicate-id / negative / unknown-sku / zero ⇒ before==after �
 [ ] **§4.2 工作台建本人交付任务** ✗ **§4.3 两份子任务合同（读写集 ✗ `input_version`）**
 [ ] **§5 真实并行** ⇒ ⭐ **`subagent` 平替 Codex 原生 Subagents** ✓
 [ ] **§6 整合复验** ✗ **§7 复盘与 Skill 迁移**
+
+
+---
+
+# ⭐⭐ L11 §1~§4.2 完成
+
+## ⭐ 课程合同（**两条验收对应两条主线** ✓）
+
+```
+`workbench_increment`: "**独立写集调度与串行集成**" ✗ `erp_increment`: "**交付采购申请**"
+`request`: "**将采购申请拆成互不冲突的实现与反证任务 ✗ 串行集成后统一复验。**"
+`acceptance`: ① 采购申请保存 SKU/数量/原因和稳定身份 ② ⭐ **写集冲突的子任务不得并行**
+              ③ 非法数量不产生采购申请
+`eval_cases`: `purchase_request_preserves_reason` ✗ ⭐ **`write_sets_reject_conflict`**
+```
+
+## ⭐ 候选已建
+
+```
+`TASK-PREP-L11-7d24f4b5998e409bbea38214c25fc57b` ✗ 基线 **`course/l11-start`** ✗ 249 文件
+⚠️ **`.course/product-source.json` 没有** ⇒ ⭐ **手册**：「**标签没有来源元数据时将客户来源与
+   哈希标为待核对 ✗ 不把目录名或元数据缺失单独当作候选无效。**」✓
+✅ 模块路径 `flowerp.service` ✗ `eval.harness` **都在候选内** ✓
+⚠️ **与 L10 不同**：**L10 用 `--source working-tree` ✗ 这次从标签来** ✓
+```
+
+## ⭐⭐⭐ 起点红的真实位置（**与我的预期不同 ✗ 如实记** ✓）
+
+```
+① ⚠️ **`write_sets_reject_conflict` 不在候选的 `EVALS` 里** ⇒ 跑它 **退出码 2**
+   「**harness.py: error: 未知 Eval：write_sets_reject_conflict**」
+   ⇒ ⭐ **控制仓库里它有**（`eval/harness.py:55` ✗ `eval/cases.py:141` ✗
+     `workbench/course_verification.py:25` ✗ `course_mainline.py:163` ✓）
+   ⇒ ⭐⭐ **"起始红"的一种形态：不是测试失败 ✗ 而是能力不存在** ✓（**与 L09 同设计** ✓）
+② ⚠️ **`purchase_request_preserves_reason` 在候选上就 PASS**（退出码 0）
+   ⇒ ⭐⭐ **原因：候选 `service.py:278` 是 `reason.strip()` ✗
+     **没有** `self.receive_stock(sku, quantity, "teaching-premature-" + pid)`** ✓
+   ⇒ ⭐⭐⭐ **所以 §4.1 那个"业务错误"是 lab 注入的 ✗ 不是候选自带的** ✓
+     ⇒ ⭐ **手册 §4.1 早说了**：「**它使用课程实验副本 ✗ 还不是稍后要交给两个子代理的
+       个人候选**」✓
+   ⇒ ⚠️ **我一开始以为"起点红就该是业务失败"✗ 那个假设是错的** ✓
+```
+
+## ⭐ 参考实现的边界（**看它 ✗ 不抄** ✓）
+
+```
+`agent/schedule.py`（**85 行**）：
+  `Subtask`(:8) 字段含 ⭐ **`input_version`**
+  `_scope`(:16) ⭐ 拒绝绝对路径 / `..` / 通配符 ✗ **`casefold()` 折叠**
+              （注释：**differently cased paths are not independent** ✓）
+  `_overlap`(:26) ⭐ 相等 / `.` / 前缀关系（**印证"写整个目录也会覆盖其中的文件"** ✓）
+  `_resource`(:30) ⭐ 非空 ✗ 不含空白 ✗ 折叠
+⇒ ⭐⭐ **`input_version` 印证**：「**固定 V1 需要可核查的版本身份**」✓
+```
+
+## 下一步（**L11**）
+
+```
+[ ] ① **在候选里建 `agent/schedule.py`**（**自己写 ✗ 参考只核边界** ✓）
+[ ] ② **建并登记 `write_sets_reject_conflict`**
+[ ] ③ **§4.3 两份子任务合同**（**甲补测试 ✗ 乙只读查风险 ✗ 读写集 ✗ `input_version`**）
+[ ] ④ **§5 真实并行** ⇒ ⭐ **`subagent` 平替 Codex 原生 Subagents**
+[ ] ⑤ **§6 串行整合与同版复验** ✗ **§7 复盘与 Skill 迁移**
+```
+
+## 🚩 待你
+
+```
+**首页实际事项编号**（**现用默认 `TASK-PREP-L11-7d24f4…`** ✓）
++ **L10 的 `task-review`**（**具名接受 ✗ 我不代签** ✓）
