@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:42 +0800
+> 最后更新：2026-10-16 04:43 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -8351,6 +8351,84 @@ A 的改动未提交 ⇒ 没有现成的 commit
 ```
 [ ] ⭐ 写 B 的六段需求（不沿用 A 的值，含「未找到可用记忆」，基线如实标注）
 [ ] ⭐ B 的检查候选（在 TASK-PREP-L15B-baseline 里只加检查，不实现）⇒ 冻结 ⇒ new.json 看它红
+[ ] ⭐ course-submit（--session-baseline-ref = 6ae4813…）
+[ ] §10 四行证据表、feedback-evidence-review Skill
+[ ] 🚩 待本人：A 的具名审核、reviewed_by、采用决定的决定人、原反馈者复验
+```
+
+---
+
+# ⭐⭐⭐⭐⭐ L15 事项 B 的六段需求已写（`26-spec-B.md`）
+
+- **日期**：2026-10-16｜**新增 Eval**：**`empty_report_keeps_header`**（**确认不在合同静态 `eval_cases` 里**）
+- **B 的基线**：**`6ae4813f1b028d133482a197cdd5896846366c73`**
+
+## ⚠️⚠️ 我在 Spec 里写明的一层
+
+```
+⚠️ B 的基线 = A 的冻结提交 9a4e9ee + A 的未审核改动（sha256 375c93cd…）
+   ⭐ 它不代表 A 已被接受：A 的 Task 仍是 review、reviewed_by=None、候选仍导不出来
+   ⇒ 依据：手册「不把失败改写为成功」、辅导资料「不能通过改写历史掩盖错误」
+```
+
+## 来源段的两件事
+
+```
+① B 自己的原问题（不是 A 的反馈）：
+   to_csv 现在要求 fieldnames，否则空结果明确抛错（这是 A 的修复）
+   而四个报表方法都没把规格传下去 ⇒ 空结果从「静默空文件」变成「直接抛错」
+   ⇒ 对下游来说仍然拿不到可用的文件结构，只是错误形式变了
+② 经验检索的原始结果（不倒填）：
+   B1 我先写的 relevant = [MEM-L15-EXPORT-EMPTY-001]
+   实际 retrieved = []（因为那条还是 candidate，status=active 的过滤排除了它）
+   snapshot_sha256 = 8e2cb5a7…
+   ⇒ 按上下文包的 rule「没有支持时明确写未找到可用记忆」⇒ 本 Spec 如实写：未找到可用记忆
+     ⇒ 而这不是「经验没用」，是「经验还没被审核」
+```
+
+## 四条列规格（两条实测，两条从 SQL 别名读）
+
+```
+sales_summary       ⇒ group_key, group_name, quantity, amount_cents
+inventory_valuation ⇒ sku, name, site_code, on_hand, average_cost_cents, value_cents, open_layers
+inventory_aging     ⇒ sku, name, lot_number, expiry_date, on_hand, reserved, available, age_days, days_to_expiry
+reorder_suggestions ⇒ product_id, sku, name, min_stock, max_stock, projected, suggested_quantity
+⇒ 前两条是有数据时实测 rows[0].keys()；后两条在现有数据下取不到 keys，所以从 SQL 的 AS 别名读
+⇒ ar_aging 返回 dict，不是行列表 ⇒ 不在 B 的范围
+```
+
+## 非目标里特别写了一条
+
+```
+❌ 不顺手修任何别的缺陷（含我读代码时误判过的「SQL 拼错」）
+   ⇒ 而那条误判已被实测否证：average_cost_cents 就是别名，我看错了换行
+```
+
+## 验收用例：五件事
+
+```
+① 四个报表方法在空结果上不再抛错，各自给出正确的表头，数据行数为 0
+② 四条规格各自独立（sales_summary 的表头不能等于库存导出的八列）
+③ 有数据时仍正确
+④ to_csv 的两条路径都成立（有规格⇒表头；无规格且空⇒明确拒绝）
+⑤ A 的四条导出不受影响（回归）
+```
+
+## 完成定义：九项 + 三个待本人
+
+```
+①~⑧ 我能做：新增检查改动前红、既有检查前后都过、四条空结果对、
+       两条路径成立、有数据不变、改动在写集内、检查先冻结、基线如实标注
+🚩 ⑨ 采用决定（采用/拒绝/补查、决定人、理由）⇒ 待本人
+🚩 ⑩ 具名审核与接受 ⇒ 待本人
+🚩 ⑪ §10 原反馈者复验 ⇒ 没有真实反馈者时保持待完成
+```
+
+## 待办
+
+```
+[ ] ⭐ B 的检查候选（在 TASK-PREP-L15B-baseline 里只加检查，不实现）
+    ⇒ 冻结成 commit ⇒ 跑 new.json 看它红
 [ ] ⭐ course-submit（--session-baseline-ref = 6ae4813…）
 [ ] §10 四行证据表、feedback-evidence-review Skill
 [ ] 🚩 待本人：A 的具名审核、reviewed_by、采用决定的决定人、原反馈者复验
