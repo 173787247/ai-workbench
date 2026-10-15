@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:48 +0800
+> 最后更新：2026-10-16 03:49 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -4748,5 +4748,74 @@ $ python -X utf8 -m eval.harness --suite blocking
 [ ] ③ §6 迁移到「库存查询」新 Task，记录经验来源/版本/适用理由
 [ ] ④ §6 同伴复验 ⇒ 我没有真实同伴 ⇒ 如实标「仅自查，待同伴」
 [ ] ⑤ 写 SUBMISSION.md（按 Skill 三分法、四组材料）
+[ ] 🚩 待本人定七件（第 0 件：两个最小入口落哪一侧）
+```
+
+---
+
+# ⭐⭐⭐ L13 自己候选上的真重启（真进程被杀，新进程用原 ID 查到）
+
+## 做法：两个独立进程，中间真杀
+
+```
+serve.py：独立进程起 8010 的 HTTP 服务，把自己 PID 与端口写文件，然后 serve_forever
+client.py：走 http.client 发真请求
+① 起进程 1 ⇒ PID 702911，端口 46191
+② 提交 ⇒ HTTP 202，task_id TASK-60B410C0E6，status queued
+③ ⭐ kill -9 702911 ⇒ 旧进程已死，端口不通（bash: 702909 Killed）
+④ 起进程 2 ⇒ PID 703013，端口 46301（PID 与端口都变了）
+```
+
+## 重启后查到什么（同一 Task ID，走 HTTP）
+
+```
+⑤ GET /api/v1/tasks/TASK-60B410C0E6 ⇒ HTTP 200
+   id 相同；status 从 queued 变成 evaluating；business_refs 含 PURCHASE:PR-TARGET
+   ⭐ error: 「服务重启时任务停在 executing，已转入安全重放」
+⑥ 视图 ⇒ HTTP 200，human_decision_recorded=False，next_action=wait
+⇒ 这不是「读取旧状态」，是「恢复 + 前进」：error 说「已转入安全重放」，status 前进到 evaluating
+  ⇒ 是 recover_automatic_tasks() 在工作，与手册 §3 参考实验的 after 同形
+  ⇒ Skill：「区分重新打开存储、真实服务重启和执行中断恢复」—— 我这次是真重启（kill -9、PID 变了）
+```
+
+## 两处没做到的（如实记）
+
+```
+⚠️ ① 「已完成任务重启后仍读到」这条我没验成
+   我试图把任务推到 completed ⇒ KeyError: 'TASK-60B410C0E6'
+   ⇒ 根因：库文件是 tasks.db，而我开的是 workbench.db
+     ls /tmp/l13-restart/rt/rt/ ⇒ platform.db / tasks.db / workbench.db（三个库！）
+     ⇒ 正好印证 Skill：「分别检查数据库记录、前置文件与外部副作用，
+       事务不自动覆盖所有存储」⇒ 一个运行目录下三个库，一个事务不可能覆盖三者
+     ⇒ 所以这条在我自己候选上还没证 ⇒ 下一轮用正确的库补
+⚠️ ② 「新进程只有一个: 4 个」是我的假判据
+   我用 pgrep -f 'l13-restart/serve.py' | wc -l 得到 4
+   ⇒ 根因：pgrep -f 会匹配到正在查询的自己（命令行里含同样字符串）
+     ⇒ ~/.dsh/AGENTS.md 里就写过这条警告，而我看到了还是用了那个写法
+     ⇒ 可靠判据是 PID 与端口（这次两者都变了才是证据）以及 kill -0 $PID
+```
+
+## version 的实际增量与写入条件（Skill 点名要查）
+
+```
+实测：任务从 queued 走到 evaluating，version 已经是 9
+代码里只有两处 +1：
+  :244 UPDATE tasks SET status='rework',error=?,version=version+1,...
+  :298 version=version+1,... WHERE id=? AND status=?
+⇒ :298 的 WHERE id=? AND status=? 就是 compare-and-set 形态
+  ⇒ 两处都是服务端在状态迁移时自增，没有「客户端传 version 进来比对」的入口
+  ⇒ 结论：有服务端内部的 CAS；但没有给客户端的乐观并发控制入口
+    ⇒ 不能说「支持客户端并发比较」；get() 会把 version 返回，客户端看得到但用不上做比较
+⇒ 正是 Skill 那句：「不凭字段存在声称支持客户端并发比较」
+```
+
+## 待办
+
+```
+[ ] ① 用 tasks.db 把任务推到 completed，再真重启一次，验「已完成仍读到」
+    ⇒ 这是本讲完成标志第 3 组材料里「已完成任务的真实重启证据」
+[ ] ② §6 迁移到「库存查询」新 Task，记录经验来源/版本/适用理由
+[ ] ③ §6 同伴复验 ⇒ 我无真实同伴 ⇒ 如实标「仅自查，待同伴」
+[ ] ④ SUBMISSION.md（按 Skill 三分法、四组材料）
 [ ] 🚩 待本人定七件（第 0 件：两个最小入口落哪一侧）
 ```
