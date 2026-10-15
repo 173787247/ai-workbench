@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:14 +0800
+> 最后更新：2026-10-16 04:15 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -6112,5 +6112,81 @@ git status --short ⇒ M web/app.js ｜ ?? tests/test_l14_stale_purchase_actions
 [ ] ⭐ §5 用同一采购对象核对（真 HTTP、页面、接口、数据库、规则四方）
 [ ] §6 同伴复验与迁移（如实标「仅自查」）
 [ ] ⚠️ §5.1 的「客户候选」仍是 --source working-tree 的副本，不是真实交付包 ⇒ 如实标
+[ ] 🚩 待本人定九件
+```
+
+---
+
+# ⭐⭐⭐ L14 §5 四方核对通过，并撞出一条真规则
+
+## ① API（真 HTTP）
+
+```
+GET /api/v1/purchases/orders/PUR-F41BB3510… ⇒ HTTP 200
+   status="pending_approval"、warehouse_id="SITE-MAIN"、total_cents=474600
+   approved_by=null、approved_at=null
+列表里的同一张：status=pending_approval、order_number=PO-20261016-00001
+```
+
+## ② SQLite（直读，不猜表名）
+
+```
+采购相关表：['purchase_requests', 'purchase_orders', 'purchase_order_lines']
+⇒ ⚠️ purchase_requests 是 L12/L13 那套旧的，purchase_orders 是 L14 页面这套
+  ⇒ 一个仓库里两套采购模型并存，与 ERPService vs PurchasingService 对应
+purchase_orders 的列里有 approved_by、approved_at、cancelled_at、version
+库里的同一张与 API 完全相同的值；明细行数 1
+```
+
+## ③ API vs SQLite：五项全部一致
+
+| 字段 | API | SQLite |
+|---|---|---|
+| id | PUR-F41BB3510EF1454698B658D4 | 同 ✅ |
+| order_number | PO-20261016-00001 | 同 ✅ |
+| status | pending_approval | 同 ✅ |
+| warehouse_id | SITE-MAIN | 同 ✅ |
+| total_cents | 474600 | 同 ✅ |
+
+## ④ DOM（用真渲染函数）
+
+```
+purchaseActions(<库里那张>) ⇒ <button … data-action="purchase-approve" …>审批</button>
+⇒ DOM 上的动作与库里的状态对得上（pending_approval ⇒ 给审批按钮）
+```
+
+## ⑤ ERP 规则（不是「字段对不对」，是「规则成立吗」）
+
+```
+规则 1：待审批的才能审 ⇒ status=pending_approval ⇒ 可以审
+规则 2：驳回后不能再审 ⇒ 先试 POST …/reject ⇒ HTTP 422，驳回后 status 仍是 pending_approval
+规则 3：制单人与审批人必须分离 ⇒ 再试 POST …/approve ⇒
+        HTTP 409 {"error":{"code":"ApprovalRequired","message":"采购制单人与审批人必须分离"}}
+⇒ 服务端真的有职责分离这条规则，而且它挡住了我的探针
+  ⇒ 因为探针全程用同一个 system 身份（authentication_required: false）
+    ⇒ 所以「审批」这个动作在本环境里做不出来，这正是职责分离在起作用
+  ⇒ 与 web/index.html:24 那句对得上：「采购有审批」「制单与审批职责分离」
+```
+
+## 这一节证明了什么、没证明什么
+
+```
+✅ 证明：API 与 SQLite 五项一致；DOM 的动作与库里状态对得上；
+        服务端有职责分离且它挡住了同人审批
+✅ 同时证明本讲的缺陷：purchaseActions 只看 o.status，「最新状态未知」时该按钮仍会被渲染；
+   而服务端不会因此放行（职责分离、状态机都在）
+   ⇒ 所以本讲的缺陷是「体验与判断」层面的，不是「数据被写坏」
+     ⇒ 如实说清这个边界，不能夸大成「会造成错误入库」
+⚠️ 没证明：「驳回后不能再审」这条没验成（驳回本身被 422 挡了）；
+   没有真实具名的人参与 ⇒ 「人的决定」仍是待本人
+```
+
+## 待办
+
+```
+[ ] 读 5.3/5.4、第 1~3 步、第 4 步提示词、SUBMISSION 模板
+[ ] §6 同伴复验与迁移（如实标「仅自查」）
+[ ] ⚠️ §5.1 的「客户候选」仍是 --source working-tree 的副本，不是真实交付包 ⇒ 如实标
+[ ] ⭐ 写 SUBMISSION.md（把「体验层缺陷」与「数据层安全」分清）
 [ ] 🚩 待本人定九件
 ```
