@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:58 +0800
+> 最后更新：2026-10-16 03:59 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -5716,5 +5716,68 @@ GET /api/v1/auth/me      ⇒ 200 {"id":"system", …, "username":"system", "disp
     ⇒ 判据要「观测量」：结果区、同步提示、业务动作
 [ ] 读 5.3/5.4、第 1~3 步、第 4 步提示词、SUBMISSION 模板
 [ ] 写页面合同 ⇒ 实现 ⇒ 先红后绿 ⇒ 同版本复验 ⇒ 完整阻断回归
+[ ] 🚩 待本人定九件
+```
+
+---
+
+# ⭐⭐⭐ L14：用真 HTTP 播出一张待审批采购单（复现前提齐了）
+
+## 走真 HTTP 依次踩了两个坑
+
+```
+① POST /api/v1/suppliers ⇒ 201（SUP-1579568A36…）｜ ② POST /api/v1/products ⇒ 201
+⚠️ 坑一：GET/POST /api/v1/warehouses ⇒ 404「接口不存在」
+   ⇒ 真路由是 /api/v1/sites（api.py:225-229）
+   ⇒ 而 web/app.js:193 也用的是 /api/v1/sites
+     ⇒ 从「页面调什么」反推路由，比从自己的记忆猜更可靠
+⚠️ 坑二：warehouse_id 传 None ⇒ 404「有效仓库不存在：None」
+   ⇒ 直读库才知道 sites 表已经有一行 {'id': 'SITE-MAIN', 'code': 'MAIN', 'active': 1}
+     ⇒ 不是「没有仓库」，是「我没查」（与上一轮那条同族）
+```
+
+## 待审批单（复现的钥匙）
+
+```
+④ POST /api/v1/purchases/orders ⇒ 201
+   {"id":"PUR-F41BB3510EF1454698B658D4C276AEA3","order_number":"PO-20261016-00001","status":"draft"}
+⑤ POST …/<id>/submit ⇒ 200，status = pending_approval
+⑥ GET /api/v1/purchases/orders?limit=50 ⇒ 1 张，状态 ['pending_approval']
+   ⭐ 待审批单：{"order_number":"PO-20261016-00001","status":"pending_approval",
+                "supplier_name":"L14 演示供应商","total_cents":474600,"warehouse_name":null}
+   ⇒ ⚠️ warehouse_name 是 null ⇒ 列表接口没带仓库名，而 app.js:471 的详情要显示它
+     ⇒ 这是另一个小缺口（详情会显示空），记下，不在本讲主线上
+```
+
+## 页面要的四样，都是真数据
+
+```
+app.js:193  Promise.all([products, customers, suppliers, sites])
+⇒ products=4、customers=0、suppliers=1、sites=1
+⇒ 四个并发、回来顺序不定 ⇒ 正是辅导资料说的「乱序响应」最可能出现的地方
+```
+
+## 复现方案（下一轮做，先说清判据）
+
+```
+要造的「断网」：停掉 18115 的服务（或打一个不通的端口模拟）
+要观察的三样（辅导资料：应观察结果区、同步提示和业务动作，而不是只检查序号变量）：
+  ① 结果区   ⇒ 采购表格是不是清空了，还是留着旧行
+  ② 同步提示 ⇒ #sync-state 显示什么，有没有「最新状态未知」和时间
+  ③ 业务动作 ⇒ 那张 PO-20261016-00001 的「审批」按钮还在不在、还能不能点
+⇒ 而「能不能点」要真的点一次看它发不发请求
+  ⇒ 依据：app.js:646 的 purchase-approve 不检查 state.purchaseStatus
+    ⇒ 预期：它会发出写请求，而服务已停 ⇒ 请求失败
+      ⇒ 但如果服务只是短暂不可达，恢复后用户可能以为那单据还是「待审批」，
+        而它其实已经被别人审过了 ⇒ 这正是「诱导一次错误审批」
+```
+
+## 待办
+
+```
+[ ] ⭐ 造断网、按三条判据观察、留下原始证据
+[ ] 读 5.3/5.4、第 1~3 步、第 4 步提示词、SUBMISSION 模板
+[ ] 写页面合同 ⇒ 实现 ⇒ 先红后绿 ⇒ 同版本复验 ⇒ 完整阻断回归
+[ ] ⚠️ 顺带记：warehouse_name 在列表里是 null（详情会显示空）
 [ ] 🚩 待本人定九件
 ```
