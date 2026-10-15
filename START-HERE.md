@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:21 +0800
+> 最后更新：2026-10-16 04:22 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -6631,4 +6631,77 @@ ReportService.to_csv([]) ⇒ ''（0 字节）
 [ ] 修 suppliers 与 reports.to_csv（先红后绿、辨别力）
 [ ] 事项 B：检索这条经验、决定采用、交付、回收效果
 [ ] 🚩 待本人：真实 L14 Task ID
+```
+
+---
+
+# ⭐⭐⭐⭐⭐ L15 手册十步 + 检查候选已建（基线实测）
+
+## 十步骨架
+
+```
+1 确认起点与首次判断 ｜ 2 从已有任务导出一份事实摘要 ｜ 3 采集实际反馈、保留三层记录
+4 观察审核与晋级边界 ｜ 5 通过工作台交付一个尚未实现的小改进 ｜ 6 核对产品结果与摘要
+7 登记为可治理 Memory ｜ 8 换一个事项、查询自己的经验
+9 让 Codex 使用上下文但不替人采用 ｜ 10 回收效果、完成跨事项证据
+```
+
+## §5 的机制：先冻结检查，后实现
+
+```
+§5 目标段：「本步路线只有一条：确认需求 ⇒ 只新增检查 ⇒ 取得真实缺口 ⇒
+   保存检查提交 ⇒ 工作台受控实现」
+   「先将事项 A 确认版的六段需求保存为 Markdown，验收段写出本次新增 Eval 名称」
+   「course-spec --lesson 15 若用于生成支架，也必须传 --eval-case；支架不替代本人需求」
+   「本步会切换三次位置：控制仓库准备检查候选 ⇒ 进入检查候选运行并冻结检查 ⇒
+     回控制仓库提交任务。解释器始终借用控制仓库 .venv，避免误跑主仓库源码」
+
+§5.2 只新增验收检查（暂不实现目标能力）
+   三个变量：「在哪检查、按什么需求、检查哪项行为」
+   守卫（防跑错仓库）：assert Path(eval.harness.__file__).resolve().is_relative_to(root)
+      ⇒ 失败时「先处理候选源码来源，暂不运行 Eval」
+   先跑既有两条：--case delivery_evidence_and_review_controls
+                 --case raw_feedback_cannot_become_blocking --report-path .runtime/l15-start/old.json
+      ⇒ 失败时「既有合同未通过，先查原失败」
+   再跑新用例：--case $l15Case --report-path .runtime/l15-start/new.json
+   ⇒ old.json 与 new.json 两个报告 = 「新增检查在改动前是红的」这一事实的原始证据
+
+§5.3 冻结检查
+   git status --short、git diff 审查 ⇒ 只暂存本次检查文件
+   ⇒ 「冻结检查不会进入随后授权的业务修复写集」
+   ⇒ git add -- $l15CheckFiles; git diff --cached --check; git diff --cached --stat
+   ⇒ 「确认暂存内容均在批准范围内，没有报告、数据库、凭据或目标业务修复」
+     ⇒ git commit -m "L15: freeze checks for personal requirement"; git rev-parse HEAD
+     ⇒ 「该提交必须能在控制仓库同一 Git 库解析，并位于 course/l15-start 之后」
+⇒ 所以「先红」在本讲是结构性保证，不是「我记得先跑一下」
+```
+
+## §5.1 的默认基线：实测与 L14 同形
+
+```
+course-prepare --lesson 15 --task-id TASK-PREP-L15-… --runtime-dir .runtime/l04-learning
+⇒ 退出码 0，mode=git_worktree，baseline_ref=course/l15-start，
+  path=…/course-worktrees/TASK-PREP-L15-37ac0a0fe9c24c379c57401c51b79cc0
+⚠️ flowerp/__main__.py 不存在 ｜ ⚠️ flowerp/server.py 不存在
+✅ flowerp/import_export.py 252 行 ｜ ✅ flowerp/reports.py 181 行
+顶层：AGENTS.md FDE_SPEC.md LICENSE README.md agent course deploy docs eval flowerp
+      harness_web main.py pyproject.toml scripts tests web
+是 worktree（.git 是文件）；基线 fb4fe93 course: L15 start baseline progression state
+
+⇒ 结论（与 L14 同形，但影响不同）：
+   · ⚠️ 没有可启动的 flowerp/ ⇒ 起不了服务、看不了页面
+   · ✅ 但 L15 要改的正是 flowerp/import_export.py 与 flowerp/reports.py，它们都在
+     ⇒ 所以「改产品代码」能做，只是验证方式是调函数、跑 eval，不是起服务
+   · ⭐ 所以 §5.1 用默认基线是对的，而 L14 §5.2 要 --source working-tree 也是对的
+     ⇒ 两讲需求不同 ⇒ 基线选择不同，不是矛盾
+```
+
+## 待办
+
+```
+[ ] 读 §1~§4、§6~§10 的细则
+[ ] 读 SUBMISSION.md 模板、reference/个人记忆集格式.md、examples/skills/
+[ ] ⭐ §5.2 的前置：候选里能跑 eval.harness 吗（那个 assert 要真跑一次）
+[ ] 写六段需求为 Markdown（验收段写出新增 Eval 名称）
+[ ] 🚩 待本人：真实 L14 Task ID（§2「从已有任务导出一份事实摘要」要用）
 ```
