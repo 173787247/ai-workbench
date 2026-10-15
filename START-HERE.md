@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 05:00 +0800
+> 最后更新：2026-10-16 05:01 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -9461,4 +9461,67 @@ workbench.feedback summary ⇒ 原命令默认读当前目录的 .runtime/workbe
 [ ] ⭐ J 区：正式 Task 人审（task-review --reviewer <真实姓名> --decision --note，🚩 待本人，J 区明说不要自动代填）
 [ ] ⭐ 写 L16 的 SUBMISSION.md（七节，五分钟答辩、技术债、下一事项迁移）
 [ ] 🚩 待本人：人审、现场需求抽取、答辩、周宁复验、同伴冷启动
+```
+
+---
+
+# ✅ L16 结业记录已写（放在运行目录），并核实了一起差点漏掉的风险
+
+## 结业记录的位置（按模板要求）
+
+```
+⭐ 运行目录下：/home/rchua/GO/CodexFDE/.runtime/l04-learning/l16-evidence/L16-结业记录.md
+⚠️ 模板原文：「先复制，再填写：把本模板复制到本讲已经选定的工作台运行目录下，原模板保持空白…
+   不要附密码、认证文件或运行数据库，也不要把这些运行材料提交进源码仓库。」
+⇒ 我照做了；lesson-16-submission/11-submission.md 只是指针与摘要
+```
+
+## 我核实的一件事（触发点是 CodexFDE/AGENTS.md 里一句边界）
+
+```
+⚠️ AGENTS.md：「客户兼容命令 workbench.cli serve/demo/init/backup 由
+   workbench/external_project.py 转交独立项目虚拟环境执行」
+⇒ 🚨 如果 serve 转交 ⇒ 我 H 区的 HTTP 可能跑的不是候选代码
+  ⇒ 而独立 FlowERP 没有我的修复 ⇒ 关键词查询不该生效
+    ⇒ 可它生效了（?keyword=椅 返回 2 行）⇒ 矛盾
+```
+
+### 三步核实
+
+```
+① grep external_project workbench/cli.py ⇒ 空；workbench/external_project.py 在候选里不存在
+   ⇒ AGENTS.md 描述的是控制仓库 HEAD（终态）的行为，course/l16-start 快照里没有那个文件
+② 在候选目录里 import，让代码自己报路径：
+   flowerp = …/TASK-FE48B898DB/flowerp/__init__.py
+   eval.harness = …/TASK-FE48B898DB/eval/harness.py ⇒ 都在候选内
+③ 行为级对照：
+   候选 list_balances 参数 [self, principal, site_id, product_id, low_stock_only, keyword]
+   独立 FlowERP 参数     [self, principal, site_id, product_id, low_stock_only] ⇒ 没有 keyword
+   ⇒ 两份代码的关键区别正好是 keyword
+     ⇒ 而 H 区 ?keyword=椅 返回 2 行（不带是 11 行）
+       ⇒ 若跑独立 FlowERP，参数被忽略，一定返回 11 行
+         ⇒ 所以返回 2 行只能是候选代码
+```
+
+⇒ 这一步把「我大概是跑对了」变成「行为上不可能跑错」
+  ⇒ 教训：读上位约束文件能救回一个已经写进索引的结论
+
+## 结业记录七节的状态
+
+| 节 | 状态 | 关键内容 |
+|---|---|---|
+| 1. 交接已有版本 | ⚠️ 未通过 | 我预判同伴会卡在「用哪份基线」，事实证明确实如此；提交号待本人 |
+| 2. 在新环境启动双系统 | 🚩 未执行 | 无同伴、非新克隆、只起客户服务、无双服务 |
+| 3. 确认现场新需求并建立检查 | ✅ 完成 | Spec 172 行；old 退出码 0；new 退出码 1；冻结 553d35b |
+| 4. 通过工作台实施与返工 | ✅ 完成 | TASK-FE48B898DB；四文件无越界；含一次真打回 TASK-43F3E41091 |
+| 5. 复验同一候选并由人决定 | 🚩 待审 | blocking 21/21；真 HTTP 三层；Graph 退出码 3 |
+| 6. 验证恢复、导出与反馈 | ⚠️ 部分 | 恢复退出码 0；导出 55043 字节 26 键；反馈读数 0 |
+| 7. 答辩并说明迁移 | ⚠️ 稿成未答辩 | 五分钟五段都有证据链接；一个技术债；一个现场改变的条件 |
+
+## 待办
+
+```
+[ ] 🚩 J 区人审（不要自动代填）｜同伴冷启动｜周宁复验｜答辩
+[ ] ⚠️ 工作台首页链路（AGENTS.md 说是唯一日常入口 http://127.0.0.1:8001/）
+[ ] ⚠️ spec_sha256 为空的原因（未调查）
 ```
