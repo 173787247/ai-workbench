@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 05:02 +0800
+> 最后更新：2026-10-16 05:03 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -9584,4 +9584,80 @@ workbench.feedback summary ⇒ 原命令默认读当前目录的 .runtime/workbe
 [ ] ⭐ 交付「完成思路 + 代码链接」
 [ ] 候选的真缺口：L14 的 Escape 焦点、16 条基线固有测试失败、
     ar_aging 没有 CSV 出口、spec_sha256 为 None
+```
+
+---
+
+# ⭐⭐⭐⭐⭐ 结营毕设：真实小问题定了
+
+## 首页链路读懂了
+
+```
+⭐ 导航四项：「◇ 事项与决策 <small>新需求</small>」「◇ 交付记录」「▤ 课程与练习」
+   「↗ 打开 FlowERP <small>客户项目</small>」（指向 http://127.0.0.1:8000）
+⭐ 登记需求的表单：<textarea id="code-requirement-spec" maxlength="40000"
+   placeholder="粘贴包含来源、目标、非目标、约束、验收用例、完成定义的具体需求">
+   ⇒ 它要六段 Spec，正是 workbench/spec.py:10 那六段
+⭐ API：/api/v1/delivery/requests（POST-only，GET 是 404）、/api/v1/delivery/views、
+   /api/v1/tasks/、/api/course/current、/api/cockpit/upgrade
+   实现在 workbench/workbench_server.py:757（控制仓库侧）
+```
+
+## 毕设的问题：ar_aging 是唯一没有 CSV 出口的报表
+
+```
+⭐ 在 TASK-E978708191（L15-B，有那四个出口）上核实：
+   sales_summary_csv(:123)、inventory_valuation_csv(:141)、
+   inventory_aging_csv(:156)、reorder_suggestions_csv(:189)
+   REPORT_COLUMNS 四个键
+   ⭐ ar_aging 在整个 reports.py 里只出现 1 次（就是它自己）
+   ⇒ 它是唯一没有 CSV 出口的报表
+⚠️ 而 TASK-FE48B898DB（L16 候选）里那些出口一个也没有
+   ⇒ 又一次说明：看代码必须先确认候选
+```
+
+## ar_aging 的真实形状（实测）
+
+```
+def ar_aging(self, principal, as_of=None) -> dict
+键 ['as_of','buckets','items','total_cents']
+  items = 明细行（id、invoice_number、partner_code、partner_name、due_date、
+                  outstanding_cents、overdue_days、bucket）
+  buckets = 五个账龄桶汇总
+⚠️ to_csv([ar_aging(...)]) ⇒ 'as_of,buckets,total_cents,items\r\n2026-10…'
+   ⇒ 它把 dict 的键当列，而 buckets 与 items 是嵌套结构，在 CSV 里会变成 Python repr
+```
+
+## 要做什么
+
+```
+⭐ 给 ReportService 加 ar_aging_csv(principal, as_of=None)
+   · 导出明细行（items），列规格取自明细行自己的字段
+   · 边界：buckets 与 total_cents 是汇总，不进这个 CSV
+   · 空结果：没有应收发票时仍写出明细的列名，行数为 0
+     ⇒ 这是 L15-A「合法空结果必须保留已确认的字段规格」的第三次迁移
+       而 not_when 写着「销售导出不能直接沿用库存或供应商的列名，要重新确认自己的规格」
+         ⇒ ar_aging 的规格与那四个都不同
+⭐ 列规格取：invoice_number、partner_code、partner_name、due_date、
+   outstanding_cents、overdue_days、bucket
+   ⇒ 理由：导给财务看的是单号、客户、到期日、未结金额、逾期天数、账龄桶
+     ⇒ id 与 partner_id 是内部主键，不进面向财务的导出
+```
+
+## 为什么适合当毕设
+
+```
+✅ 真实（L15-B 的记录里已列为剩余缺口）｜范围受控（一个方法+一个规格+一条检查）
+✅ 能先红后绿（ar_aging_csv 现在不存在）｜能迁移经验（第三次迁移，边界不同）
+✅ 能走首页（FlowERP 侧需求，可从「事项与决策」发起）｜能复验（空/有数据/只读/权限）
+```
+
+## 待办
+
+```
+[ ] ⭐ 从首页登记（用 code-requirement-spec 粘贴六段 Spec，逐字含新增 Eval 名）
+[ ] ⭐ 记首页返回的请求 ID 与生成的任务
+[ ] ⭐ 走课程那条链：Spec ⇒ 检查先红 ⇒ 实现 ⇒ Eval ⇒ 人审 ⇒ 证据
+[ ] ⭐ 交付「完成思路 + 代码链接」
+[ ] 🚩 待本人：列规格取舍、人审
 ```
