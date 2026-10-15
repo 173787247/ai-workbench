@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:02 +0800
+> 最后更新：2026-10-16 04:14 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -6039,5 +6039,78 @@ state.purchaseStatus === "failed" 时：
     ⇒ 先红后绿：写一个能复现的检查，看它红，改完看它绿
     ⇒ 检查要落在 tests/ 或 eval/（都在写集内）
 [ ] 同版本复验 ｜ 完整阻断回归 ｜ §5 用同一采购对象核对 ｜ §6 同伴复验与迁移
+[ ] 🚩 待本人定九件
+```
+
+---
+
+# ⭐⭐⭐⭐ L14 实现三条合同：先红、后绿、有辨别力
+
+## 改了什么（都在 web/app.js，702 → 746 行）
+
+```
+① state 加 lastSyncAt: 0
+② renderPurchases 成功时才刷新它：state.lastSyncAt=Date.now()
+③ setPurchaseStatus("failed") 的提示改成「最新状态未知」+「上次成功查询：<时间>」，
+   并在这一刻调 markEvidenceStale()
+④ 新增 markEvidenceStale()：保留对象身份，把需要最新状态的动作按钮换成一句
+   「已停用需要最新状态的动作，请重新查询后再作决定」
+   新增 evidenceIsStale()
+⑤ 顶部同步提示改成「最新状态未知（上次成功查询 <时间>）」
+⑥ purchase-approve 动作里加：if(evidenceIsStale())throw new Error(…)
+```
+
+## 先红 → 后绿
+
+```
+先红：node tests/test_l14_stale_purchase_actions.js web/app.js
+      ⇒ ✗ 合同 1a 失败：失败提示必须说明「最新状态未知」
+        实际="…<b>采购数据加载失败</b><span>已隐藏旧结果，请恢复连接后点击查询或刷新。</span>"
+      ⇒ 退出码 1
+后绿：✓ 前置、✓ 合同 1c、✓ 合同 1、✓ 合同 2、✓ 合同 3 ⇒ 全部通过，退出码 0
+```
+
+## 我的断言写窄了一次
+
+```
+⚠️ 第一次跑出的是「合同 1b 失败：必须带最后获取时间」，实际="本次会话还没有成功查询过"
+⇒ 那是我的断言不合理：从没成功查询过时，正确说法就是「还没有成功查询过」
+  ⇒ 改成接受两种合法形态，并新增合同 1c：先设 lastSyncAt 再失败 ⇒ 必须有时间
+```
+
+## 辨别力与同案复验
+
+```
+撤销 app.js（git stash push web/app.js，检查脚本留着）⇒ ✗ 合同 1a 失败，退出码 1
+恢复修复版 ⇒ 通过，退出码 0
+```
+
+## 回归：一处命令不适用、两处要说明
+
+```
+① ⚠️ python -X utf8 -m unittest tests.test_http_api ⇒ ImportError: 模块不在本仓库
+   ⇒ web/AGENTS.md 那条命令是控制仓库的，独立 FlowERP 候选里没有那个模块
+     ⇒ 如实记：没跑成，原因是模块不在，不是「跑了但失败」
+② ✅ blocking Eval ⇒ {"total": 12, "passed": 12, "decision": "pass"}
+   ⇒ 客户仓库 12 条，控制仓库 21 条，两个仓库套件不同
+③ ✅ 完整 unittest ⇒ Ran 887 tests，FAILED (failures=10, errors=31, skipped=19) = 41 个
+   撤销 app.js 后基线也是 41 个，diff 逐条相同
+   ⇒ 我的改动没引入任何新失败，那 41 个是候选本来就有的
+```
+
+## 改动范围
+
+```
+git status --short ⇒ M web/app.js ｜ ?? tests/test_l14_stale_purchase_actions.js
+⇒ 都在合同写集内（web/、tests/），一行没碰 flowerp/、workbench/
+```
+
+## 待办
+
+```
+[ ] 读 5.3/5.4、第 1~3 步、第 4 步提示词、SUBMISSION 模板
+[ ] ⭐ §5 用同一采购对象核对（真 HTTP、页面、接口、数据库、规则四方）
+[ ] §6 同伴复验与迁移（如实标「仅自查」）
+[ ] ⚠️ §5.1 的「客户候选」仍是 --source working-tree 的副本，不是真实交付包 ⇒ 如实标
 [ ] 🚩 待本人定九件
 ```
