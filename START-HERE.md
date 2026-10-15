@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 02:16 +0800
+> 最后更新：2026-10-16 02:30 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -1156,4 +1156,60 @@ summary: {"total":22, "passed":19, "blocking_failed":1, "observing_failed":2, "d
 
 ```
 **建候选分支 ✗ Actions variables ✗ 推送 ✗ PR ✗ 真实 Run** ⇒ **都在你的远程仓库上** ✓
+```
+
+
+---
+
+# ⭐ L08 §5 续二（**A 的隔离演示工作流 ✗ 并本地重现了机制**）
+
+## ⭐ 本地重现 A（**用我自己的候选 ✗ 不是纸上推演** ✓）
+
+```
+./.venv/bin/python -X utf8 -m eval.harness --suite blocking \
+  --case sales_credit_and_atomic_reservation --report-path …
+⇒ ⭐ **真实 Harness 退出码 = 1**
+⇒ 报告 {"decision":"**block**", "blocking_failed":**1**, "total":1}
+⇒ 模拟 `exit 0` 之后：**外层退出码 = 0**
+**对照**：不吞 **1** ✗ 吞掉 **0** ⇒ ⭐⭐ **内部红 ✗ 外层绿 = A 假绿** ✓
+⚠️ **但这不是"Job 绿"** —— **它是本地进程退出码** ✗ **"Job 绿"必须真实 CI 产生** ✓
+```
+
+## ⭐⭐ 手册 §6.1 有一条我差点漏掉
+
+> 「**先列出哪些步骤实际命中同一缺陷；如果完整单测也因此非零 ✗
+>  A 的隔离演示须同样保留其原失败 ✗ 仅故意吞掉外层传播。**」
+> 「**无关环境或接线错误先处理 ✗ 不能混入这个对照。**」
+
+**实测**：
+
+```
+不设 FLOWERP_PROJECT_ROOT：Ran **902** ✗ FAILED (failures=7, errors=**32**)
+设了：                      Ran **910** ✗ FAILED (failures=8, errors=**22**)
+⇒ ⭐ **errors 32→22 ✗ Ran 902→910** ⇒ **10 个原来 ERROR 的能跑了** ✓
+
+剩下 22 个的原因（**两类我都查了**）：
+① setUpClass: `flowerp_root()` ⇒ **ValueError: 请设置 FLOWERP_PROJECT_ROOT**（**少设环境变量** ✓）
+② `test_l00_shell`: **ValueError: 缺少必需文件 …/L00/starter/.gitignore**
+   ⇒ ⭐ **候选快照按 git 规则生成 ⇒ 被忽略的文件没带过去** ✓
+⇒ ⭐⭐ **全都不是原子预占造成的** ⇒ **按手册"不能混入这个对照"** ✓
+   ⇒ ✅ **所以我的 A 工作流刻意不含 `Unit tests` 那一步** ✓
+   ⚠️ **这是相对示例的一处偏离 ✗ 而偏离理由是手册自己给的** ✓
+```
+
+## 待审产物
+
+```
+<候选>/ci_staging/eval.yml                 133 行（**B/C 用的**）
+<候选>/ci_staging/eval-a-false-green.yml   10 步（**A 用 ✗ 只有 workflow_dispatch** ✓）
+⚠️ 活动的 `.github/workflows/eval.yml`（81 行）**一字未动** ✓
+```
+
+## L08 待办
+
+```
+[ ] ⚠️ `test_l00_shell` 的 22 个 error（**候选快照缺 L00 starter 文件**）
+    ⇒ 手册说"先处理" ✗ **记为独立待办 ✗ 不混进 A/B/C** ✓
+[ ] **B 的修复计划**（**只含工作流与必要证据实现文件 ✗ 不含业务服务** ✓）
+[ ] 🚩 **建候选分支 ✗ Actions variables ✗ 推送 ✗ PR ✗ 真实 Run** ⇒ **待本人** ✓
 ```
