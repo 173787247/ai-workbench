@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 02:33 +0800
+> 最后更新：2026-10-16 02:35 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -1333,4 +1333,79 @@ ci_staging/eval-a-false-green.yml   133 行  ← A 用（`exit 0`）
 ```
 **建候选分支 ✗ Actions variables（`L08_FLOWERP_REPOSITORY` / `L08_FLOWERP_SHA`）✗
  推送 ✗ PR ✗ 真实 Run** —— **全在你的远程仓库上** ✓
+```
+
+
+---
+
+# ⭐ L09 开工（**把失败报告翻译成修复任务**）
+
+## §1 候选 ✗ 缺陷定位
+
+```
+course-contract --lesson 9 ⇒ phase "**repair**"
+  workbench_increment "**报告到 Repair Task 的确定性映射**" ✗ erp_increment "**交付取消释放预占**"
+  write_scope ["flowerp/","**agent/**","eval/","tests/"]   ← **agent/ 是新进的**
+  acceptance ["取消已预占订单会完整释放预占。",
+              "**修复任务保存失败项 ✗ 允许写集和复验命令。**"]
+  eval_cases ["cancellation_releases_reservation"]
+course/l09-start = f8f789c29e8391afcd8cc056f270b37e9765d1b9
+course-prepare ⇒ TASK-PREP-L09-20261016023423 ✗ 1000 文件
+  gap#9 honest_failure "**取消已预占订单不释放库存**" ✗ overlay **只有 flowerp/service.py**
+模块位置核对（手册的断言）⇒ 退出码 0 ✗ 两个模块都属于候选 ✓
+```
+
+## ⭐⭐ 缺陷：`flowerp/service.py:259 cancel_order`
+
+```python
+status = order["status"]
+if status not in {DRAFT, RESERVED}: raise InvalidTransition(…)
+if False and status == OrderStatus.RESERVED:      # ⚠️ **病根**（**与 L05 同一手法**）
+    …按 **order_id** 查明细 ⇒ 释放预占 ⇒ 写流水…
+conn.execute("UPDATE sales_orders SET status=?…", (CANCELLED, order_id))
+⇒ ⭐ **正确实现就在 `False and` 后面 ✗ 是死代码** ✓
+⇒ ⭐ **所以"取消"成功 ✗ 而货还占着** —— 与 L08 的"状态未变 ✗ 三张表变了"**成镜像** ✓
+```
+
+## ⭐⭐ §2 支架盘点：**映射器已经存在**
+
+```
+agent/repair.py **151 行** ✗ 含 `:11 def map_repair_report(raw_report, *, source_task, candidate, …)`
+  `:98 "Legacy teaching mapper used by Loop/Graph; use map_repair_report for strict tasks."`
+tests/test_repair_mapper.py 已有 ✗ 三种状态名 repair_required / no_blocking_repair / invalid_report **全在** ✓
+⇒ ⭐⭐ **正是手册那句**：「**当前参考源码已提供严格接口时 ✗ 如实指出已有支架和本人的新增部分 ✗
+   不要人为删掉已有能力制造失败**」✓
+⇒ ⭐ **而这次我在动手前先查了** —— **L04 那个"唯一缺口是文件入口"的假结论没重演** ✓
+```
+
+## ⚠️ 辅导资料的伪代码与实际缺陷**病根不同**
+
+```
+辅导资料 §2 的伪代码（**它自称"不是当前 FlowERP 源码"**）：
+  order.status = "cancelled"
+  if order.status == "reserved":   ← 病根：**状态修改在前 ✗ 判断在后**
+而我的实际候选：**病根是 `if False and`** ✗ **判断用的状态本来就对** ✓
+⇒ ⭐ **症状相同（释放没执行 ✗ 状态却改了）✗ 病根不同** ✓
+```
+
+## ⭐ 辅导资料 §1 的数字（**比手册多一层**）
+
+```
+在库 10/8 ✗ TARGET 4/3 ✗ OTHER 2/1
+**取消前**可用：A 10−4−2=**4** ✗ B 8−3−1=**4**
+**取消后**：总预占 **2/1** ✗ 可用 **8/7** ✗ 在库 **10/8** ✗ 流水 −4/−3 ✗ 在库变动 **0**
+⭐⭐ 「**"可用量上升"无法区别这三种错误**（**只改状态 / 全清零 / 假入库**）✗
+   **必须同时检查目标订单 ✗ 其他订单 ✗ 在库和流水**」
+   ⇒ 不变量：**其他订单不受影响 ✗ 在库不因取消变化** ✓
+```
+
+## L09 待办
+
+```
+[ ] 审那段死代码（**事务边界 ✗ 流水字段** ✓）
+[ ] 登记三项个人检查：`l09_personal_target_other` ✗ `l09_personal_cancel_refusals`
+    ✗ `l09_personal_cancel_rollback`（**手册点名的名字** ✓）
+[ ] 跑 `cancellation_lab.py` 六个模式（**`leak` 要标清是教学注入** ✓）
+[ ] 用真实红报告跑映射器生成草案 ｜ [ ] §4 本人确认（**待本人**）
+[ ] 读 PPT 333 行 ✗ `reference/` ✗ `assets/` ✗ `examples/skills`
 ```
