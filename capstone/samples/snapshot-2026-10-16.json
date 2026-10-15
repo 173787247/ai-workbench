@@ -1,0 +1,49 @@
+{
+  "_note": "**脱敏样本 2**：与样本 1 形态不同 —— 更少持仓 ✗ 更高的现金 ✗ 一只跌停 ✗ 一只缺成本价。",
+  "as_of": "2026-10-16",
+  "total_assets_pct_base": 1.0,
+  "cash_weight_pct": 0.612,
+  "drawdown_pct": 0.094,
+  "positions": [
+    {
+      "code": "GGG",
+      "weight_pct": 0.181,
+      "industry_l1": "制造业",
+      "industry_l2": "通用设备",
+      "close": 12.4,
+      "open_price": 15.9,
+      "atr14": 1.2,
+      "held_days": 77,
+      "unrealized_pnl_pct": -0.22,
+      "loss_pct_of_total": 0.0398,
+      "loss_if_stopped_pct": 0.0398
+    },
+    {
+      "code": "HHH",
+      "weight_pct": 0.207,
+      "industry_l1": "信息技术",
+      "industry_l2": "软件开发",
+      "close": 30.1,
+      "open_price": 22.0,
+      "atr14": 2.1,
+      "held_days": 14,
+      "unrealized_pnl_pct": 0.368,
+      "loss_pct_of_total": 0.0,
+      "loss_if_stopped_pct": 0.0,
+      "untradeable_today": true
+    },
+    {
+      "code": "III",
+      "weight_pct": 0.0,
+      "industry_l1": "消费",
+      "industry_l2": "食品饮料",
+      "close": null,
+      "open_price": null,
+      "atr14": null,
+      "held_days": null,
+      "unrealized_pnl_pct": null,
+      "loss_pct_of_total": null,
+      "loss_if_stopped_pct": null
+    }
+  ]
+}

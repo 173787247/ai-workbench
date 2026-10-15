@@ -1,0 +1,25 @@
+# 运行数据与产物
+.runtime/
+out/
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[codz]
+.venv/
+venv/
+
+# 个人学习记录（含机器专属绝对路径 ✗ 不进公开仓库）
+lesson-*-submission/
+
+# 复验原始证据（81M 探针输出 ✗ 与记录分开存）
+lesson-04-submission/
+
+# Node
+node_modules/
+
+# 编辑器 / 系统
+.DS_Store
+*.swp

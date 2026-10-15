@@ -1,0 +1,28 @@
+{
+  "_note": "**脱敏样本**：代码为占位符 ✗ 只有百分比与倍数 ✗ 无绝对金额、无账户号、无真实标的。",
+  "as_of": "2026-10-15",
+  "total_assets_pct_base": 1.0,
+  "cash_weight_pct": 0.226,
+  "drawdown_pct": 0.031,
+  "positions": [
+    {"code": "AAA", "weight_pct": 0.088, "industry_l1": "制造业", "industry_l2": "半导体",
+     "close": 41.2, "open_price": 45.0, "atr14": 1.55, "held_days": 23,
+     "unrealized_pnl_pct": -0.084, "loss_pct_of_total": 0.0074, "loss_if_stopped_pct": 0.0074},
+    {"code": "BBB", "weight_pct": 0.241, "industry_l1": "制造业", "industry_l2": "半导体",
+     "close": 18.6, "open_price": 16.0, "atr14": 0.72, "held_days": 11,
+     "unrealized_pnl_pct": 0.1625, "loss_pct_of_total": 0.0, "loss_if_stopped_pct": 0.0},
+    {"code": "CCC", "weight_pct": 0.152, "industry_l1": "制造业", "industry_l2": "通用设备",
+     "close": 27.9, "open_price": 31.5, "atr14": 1.10, "held_days": 64,
+     "unrealized_pnl_pct": -0.114, "loss_pct_of_total": 0.0173, "loss_if_stopped_pct": 0.0173},
+    {"code": "DDD", "weight_pct": 0.121, "industry_l1": "信息技术", "industry_l2": "软件开发",
+     "close": 55.3, "open_price": 51.0, "atr14": 2.40, "held_days": 8,
+     "unrealized_pnl_pct": 0.0843, "loss_pct_of_total": 0.0, "loss_if_stopped_pct": 0.0,
+     "untradeable_today": true},
+    {"code": "EEE", "weight_pct": 0.118, "industry_l1": "信息技术", "industry_l2": "软件开发",
+     "close": 9.41, "open_price": 12.8, "atr14": 0.88, "held_days": 41,
+     "unrealized_pnl_pct": -0.265, "loss_pct_of_total": 0.0313, "loss_if_stopped_pct": 0.0313},
+    {"code": "FFF", "weight_pct": 0.054, "industry_l1": "消费", "industry_l2": "食品饮料",
+     "close": 33.0, "open_price": 33.5, "atr14": null, "held_days": 5,
+     "unrealized_pnl_pct": -0.015, "loss_pct_of_total": 0.0008, "loss_if_stopped_pct": 0.0008}
+  ]
+}
