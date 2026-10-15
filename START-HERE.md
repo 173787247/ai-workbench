@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:18 +0800
+> 最后更新：2026-10-16 03:20 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -3145,3 +3145,79 @@ R6：`reject_purchase` ⇒ `approved_by='alice'` ✗ ✅ **已驳回入库被拦
 ③ **证据冗余风险**（321 文件 ✗ 8.2M 不在任何版本库）⇒ 选 A/B/C/D
 ④ **R4 的契约冲突**：非法数量该抛 `ValueError` 还是 `ValidationError`
 ⑤ ⭐ **L12 的两位具名的人**：**实际交付审核人** ✗ **业务审批人** ⇒ **两个人 ✗ 两个门** ✓
+
+
+---
+
+# ⭐⭐⭐ L12 首红：**第四次 `if False and`**
+
+## 被剥离的那一行（**`git diff HEAD` ✗ 这次我先看了** ✓）
+
+```diff
+@@ -344,7 +344,7 @@ class ERPService:
+                 raise InvalidTransition(f"采购 {request_id} 已完成入库")
+-        if item["status"] != PurchaseStatus.APPROVED:
++        if False and item["status"] != PurchaseStatus.APPROVED:
+             raise ApprovalRequired(f"采购 {request_id} 未审批，不允许入库")
+```
+⇒ ⭐⭐⭐ **审批守卫被短路 ⇒ 未审批的采购也能入库** ✓
+   ⇒ **HEAD（`course/l12-start`）是拒绝的** ✗ **工作树把它短路了** ✓
+
+## ⭐⭐⭐ 同一手法的**四次**记录
+
+| 讲 | 被短路的守卫 |
+|---|---|
+| **L05** | `if False and exists:` |
+| **L09** | `if False and status == OrderStatus.RESERVED:` |
+| **L10** | `if False and order["status"] != OrderStatus.RESERVED:` |
+| **L12** | ⭐ **`if False and item["status"] != PurchaseStatus.APPROVED:`** |
+
+⇒ ⭐⭐ **四次都是**：**把守卫的第一个条件换成 `False` ⇒ 那个 `raise` 成死代码** ✗
+   **而正确的实现就在下一行 ✗ 只是到不了** ✓
+
+## ⭐⭐ 首红（**一绿一红** ✓）
+
+```
+[PASS ] receiving_is_idempotent       「**重复入库键只生效一次**」✓（**起点绿 ⇒ 回归检查** ✓）
+[BLOCK] purchase_requires_approval    ⚠️ **`AssertionError: 未审批采购被入库`** ✓
+{"total": 2, "passed": 1, "blocking_failed": 1, "decision": "block"}
+⇒ ⭐ **`purchase_requires_approval` 的红正是本讲要修的** ✓
+```
+
+## ⭐⭐ `agent/graph.py`（**123 行 ✗ 本讲的真模块 ✗ 这次我先看了** ✓）
+
+```
+`DeliveryState`(:14) ✗ `move(target, reason)`(:25) ✗ `_load_state`(:30) ✗ `_result`(:42)
+`_save_state`(:52) ✗ `run_graph(max_rounds=3, reject_once=False, *,
+  require_human_review=False, …)`(:59) ✗ `main`(:106)
+⇒ ⭐ **五要素的映射**：**节点** ⇒ `run_graph` 的阶段 ✗ **边** ⇒ `move(target, reason)` ✗
+  **共享状态** ⇒ `DeliveryState` ✗ **执行器** ⇒ `run_graph` 自身 ✗
+  ⭐ **持久化** ⇒ `_load_state` / `_save_state`（**"重启后要知道停在哪版"** ✓）
+```
+
+## ⭐ 合同的两条验收**正是 L11 我记录的两件事**
+
+```
+① **未审批采购入库被阻断且库存不变** ⇒ **`purchase_requires_approval`**（**本讲要修** ✓）
+② **具名审批后允许一次幂等入库** ⇒ **`receiving_is_idempotent`**（**起点绿** ✓）
+③ ⭐ **Graph 状态与 ERP 权威状态可对账**
+   ⇒ ⭐⭐ **"ERP 权威状态"** —— **Graph 的状态不是权威 ✗ ERP 才是** ✓
+```
+
+## ⚠️ 一处我读命令的失误（**当场报错 ✗ 没静默** ✓）
+
+```
+⚠️ 我写 `git show HEAD:flowerp/service.py | grep …` ✗ **冒号在 shell 里要引号** ⇒
+   `bash: line 7: course/l12-start: No such file or directory` ✗
+   `bash: line 10: agent/graph.py: Permission denied` ✓
+⇒ ⭐ **两处都当场报错** ⇒ **比"吞错"那类好得多** ✗ **但教训是：`<rev>:<path>` 要引号** ✓
+```
+
+## 下一步
+
+```
+[ ] **第 5 步的其余**：进入候选 ✗ 核对源码与解释器（**手册 313 行** ✓）
+[ ] **§3 个人实现**：**恢复 `receive_purchase` 的审批守卫**（**本轮 write_scope 含 `flowerp/`** ✓）
+[ ] **§4 真实等待与人审** ✗ **§5 Graph 与业务对账** ✗ **§6 同伴 ✗ 迁移与流程版本**
+[ ] 🚩 **两位具名的人**：**软件审核人 ✗ 采购负责人** ⇒ **待本人**
+```
