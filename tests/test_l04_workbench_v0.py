@@ -127,11 +127,16 @@ class V0Tests(unittest.TestCase):
         self.assertFalse((cand / "a").exists(), "缺写集时必须先拒绝，不能跑完再判")
 
     def test_a10_write_outside_candidate_is_detected_and_rejected(self):
-        """⭐ A-10 **候选目录之外的写入必须被发现并拒绝**。
+        """⭐ A-10 **候选父目录子树内（深度 ≤ 2）的越界写入要被发现并拒绝**。
 
         这一条是 L04 独立复验者查出来的高危缺口：
         原来 `--allow-write workbench/` 下用 `../` 改掉候选目录外的文件，
         报告却是 `{"ok": true, "changed": [], "out_of_scope": []}` —— **零告警**。
+
+        ⚠️ **这条测试名不要读大了**：它只覆盖**父目录子树内 ✗ 深度 ≤ 2 ✗ 非 `.git`**。
+        第二轮复验实测**六类形状仍然漏检**（祖父目录 ✗ 无关绝对路径 ✗ 深度 > 2 ✗
+        软链接 ✗ `.git` 路径 ✗ 源仓库深处）⇒ **检测器不是边界** ✗ 见
+        `execution.py` 的 `_snapshot_outside` docstring 与 `SUBMISSION.md`。
         """
         cand = self.dir / "cand"
         cand.mkdir()
