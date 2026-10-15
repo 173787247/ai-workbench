@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 02:56 +0800
+> 最后更新：2026-10-16 02:58 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -2145,3 +2145,57 @@ $ ./.venv/bin/python -X utf8 -m agent.loop --max-rounds 1 --token-budget 30000
     ⇒ ⭐ 依据：**复制品无 `.git` ⇒ 两项环境性红消不掉** ✗ **手册：环境错误不算业务红灯** ✓
 [ ] 🚩 **具名接受**（`task-review`）⇒ **待本人** ✓
 [ ] ⚠️ 待补：**PPT 288 行 ✗ `reference/` ✗ `assets/` ✗ `examples/skills`**
+
+
+---
+
+# ⭐⭐⭐ L10 §6 完成 ✗ 参考机制对照
+
+## §6 安全停止（**实测 ✗ 手册那句逐字达成**）
+
+```
+cd <stop-candidate> && python -B -X utf8 -m agent.loop --max-rounds 1 --timeout 900 \
+  --token-budget 30000 --codex
+⇒ 退出码 **2** ✗ entry "**run_personal_loop**" ✗ status "**stopped_max_rounds**"
+  reason "**本轮检查已用完且没有下一次检查位置；不启动新的业务修改**"
+  rounds **1** ✗ tokens_used **0** ✗ remaining_failures **4 项**（**与执行前报告一致**）
+  selected_cases **5 项** ✗ 业务源码 **74a190b5 前后一致** ✓
+⇒ ⭐⭐ **手册 §6**：「**只给一次检查机会。没有后置检查位置 ✗ 它就不能发起修改**」✓
+```
+
+## ⭐ 加了 `workbench_executor`（**手册第 ⑤ 条** ✓）
+
+```
+从控制目录 ✗ 用控制解释器 ⇒ `task-create --workspace <候选> --source-task-id <父>
+  --spec-path <业务Spec> --execute-code` + 逐个 `--write-scope` ⇒ `task-run`
+⇒ ⭐ "不得直接套用参考 `_run_codex` 的宽泛 workspace-write" 落地 ✓
+⚠️ **而 §6 没调到它** —— **`max_rounds=1` 在它之前就返回了** ✗ **正是本讲要的** ✓
+```
+
+## ⚠️ 我修了三处自己的接线错
+
+```
+一：`main()` 替换没生效 ✗ **而我的检查误报"已接"**
+   ⇒ 我 grep 的是 `'run_personal_loop(' in t.split('def main')[1]` ✗
+     **而那个名字的**定义**在 `main` 之后 ⇒ 命中的是定义** ✓
+   ⇒ ⭐⭐⭐ **又是"用一个分辨不出东西的检查下结论"**
+二/三：`NameError: CONTEXT_NAME` ✗ `NameError: run_personal_loop`
+   ⇒ **往已有模块尾部追加 ✗ 而 `main()` 在文件中部、`__main__` 守卫在它后面** ✓
+   ⇒ ✅ **把 `if __name__ == "__main__"` 挪到最末** ✓
+```
+
+## ⭐⭐⭐ 十二种控制路径 ✗ 用我的入口复跑六条
+
+```
+参考的 `empty-report` ⇒ ⚠️ **converged**（**`results: []` 让 failures 为空 ⇒ 误判**）
+⭐ **我的 ⇒ `stopped_invalid_report`** ⇒ ⭐ **我比参考严 ✗ 而那正是手册第 ⑥ 条要补的口子**
+其余五条**逐字复现**：already-green ✗ repeated ✗ converge ✗ oscillating ✗ last-repair ✓
+⭐ 三处印证辅导资料：`changed-reason` 也停 ✗ `oscillating` 跑满 3 轮才停 ✗ **空报告**
+```
+
+## 待做
+
+```
+[ ] ⚠️ Spec 的 `acceptance` 措辞改（**复制品无 `.git` ⇒ 两项环境性红消不掉**）
+[ ] **写 `SUBMISSION.md`**（五节模板）✗ 读 PPT 288 行 ✗ `reference/` ✗ `assets/` ✗ `examples/skills`
+[ ] 🚩 **具名接受 ✗ 同伴反证** ⇒ **待本人**
