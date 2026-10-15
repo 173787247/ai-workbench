@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:08 +0800
+> 最后更新：2026-10-16 03:09 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -2652,4 +2652,64 @@ read-only allowed ｜ invalid-path rejected ｜ duplicate-name rejected
 [ ] **§4.3 两份子任务合同**（**甲补测试 ✗ 乙只读查风险 ✗ 带 `input_version`**）
 [ ] **§5 真实并行** ⇒ ⭐ **`subagent` 平替 Codex 原生 Subagents**
 [ ] **§6 串行整合 ✗ 同版复验**（**命令已在 `08-selected.json` 跑过** ✓）⇒ **§7 复盘**
+```
+
+
+---
+
+# ⭐⭐⭐ L11 §4.3：找到候选的**真实业务缺口**
+
+## ⚠️⚠️ 更正我上一轮的结论
+
+```
+⚠️ **我在 `05-candidate-and-red.md` 里写**：「**候选不含"提前入库"缺陷 ⇒ 采购那块它本来就是好的**」
+⇒ ⚠️ **只对了一半**：
+   ✅ **对**：**候选确实没有 `receive_stock` 那行** ✓
+   ❌ **错**：**"业务那块是好的"不成立 —— 它有一个空理由缺口** ✓
+```
+
+## 五个边界的实测（**只看真行为** ✓）
+
+| 输入 | 结果 |
+|---|---|
+| 正常（7 件 ✗ "低于补货点"） | ✅ `PR-TARGET` ✗ `status=proposed` ✗ `reason=低于补货点` |
+| 零数量 / 负数量 | ✅ `ValueError: 采购数量不能为空` |
+| ⚠️⚠️ **理由全空格** | ⚠️ **通过了！保存了 `reason: ''`** |
+| 商品不存在 | ✅ `NotFound` |
+| 编号重复 | ✅ `IntegrityError: UNIQUE constraint failed` |
+
+⇒ ⭐⭐⭐ **辅导资料 §1 明说**：「**失败路径也应提前确定：数量为零或负数 ✗
+   **理由全为空格** ✗ 商品不存在 ✗ 申请编号已存在时拒绝 ✗ 请求前后五表不变**」✓
+⇒ ⭐ **而 `purchase_request_preserves_reason`（`cases.py:114`）只测了零数量** ✗ **没测空理由** ✓
+   ⇒ ⭐⭐⭐ **这就是"测试通过 ✗ 业务仍有错误"的真实实例 ✗ 而且在候选上 ✗ 不是 lab 注入的** ✓
+   ⇒ ⭐ **本讲让乙"只读实现查风险"要交回的正是这个** ✓
+
+## 接口已固定（**§4.3 要求** ✓）
+
+```
+`:261 propose_purchase(sku, quantity, reason, request_id=None, supplier_id=None)`
+`:291 approve_purchase(request_id, approved_by)` ✗ `:337 receive_purchase(request_id, event_key)`
+⭐ **三个动作分开 ⇒ "把提出想买和已经到货分开"在接口层就落实了** ✓
+`purchase_requests` DDL：⭐ **`quantity INTEGER NOT NULL CHECK(quantity > 0)`** ✓
+⭐ **`input_version = "sha256:f094e411de7716fb5a4ecd01"`**（六个文件合并）
+   ✗ `git HEAD = 9e9ce0a7d549de4fd0ff855006ae2063aa60b1e9` ✓
+```
+
+## 两份合同 ✗ `assert_parallel_safe`
+
+```
+甲 `jia-tests`：**只写 `tests/test_l11_purchase.py`** ✗ 独立临时库
+乙 `yi-risk-review`：⭐ **`write_set` 是空元组** ✗ 独立临时库
+⇒ `assert_parallel_safe` ⇒ `{"parallel": true, "conflicts": [], "boundary": "只按声明的…"}`
+⇒ 三条 R/W 逐条核 ⇒ **全空** ✓
+⭐ 反证 1：乙的写集写 `tests/` ⇒ ✅ **拒绝 ✗ 抓到 `tests/test_l11_purchase.py`** ✓
+⭐ 反证 2：不同 `input_version` ⇒ ✅ **拒绝** ✓
+```
+
+## 下一步
+
+```
+[ ] ⭐ **§5 真实并行**（**`subagent` 平替 Codex 原生 Subagents** ✓）
+    ⇒ 甲补 `tests/test_l11_purchase.py` ✗ 乙只读查风险（**应找到空理由缺口** ✓）
+[ ] **§6 串行整合 ✗ 同版复验** ⇒ **§7 复盘与 Skill 迁移**
 ```
