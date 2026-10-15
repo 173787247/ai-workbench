@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 02:35 +0800
+> 最后更新：2026-10-16 02:37 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -1408,4 +1408,83 @@ tests/test_repair_mapper.py 已有 ✗ 三种状态名 repair_required / no_bloc
 [ ] 跑 `cancellation_lab.py` 六个模式（**`leak` 要标清是教学注入** ✓）
 [ ] 用真实红报告跑映射器生成草案 ｜ [ ] §4 本人确认（**待本人**）
 [ ] 读 PPT 333 行 ✗ `reference/` ✗ `assets/` ✗ `examples/skills`
+```
+
+
+---
+
+# ⭐ L09 §2~§3（**三项个人检查 ✗ 业务红报告 ✗ 映射草案**）
+
+## 一、事务语义核实（`flowerp/store.py:125`）
+
+```python
+def connect(self):
+    try:
+        yield conn
+        conn.commit()          # ⭐ 正常退出 ⇒ 提交
+    except Exception:
+        conn.rollback()        # ⭐ 异常 ⇒ 回滚
+        raise
+```
+⇒ ⭐⭐ **完整的提交/回滚语义** ⇒ **"推动那个 `False`"不会留下半释放** ✓
+⇒ ⚠️ **我原本想"不靠读代码 ✗ 直接实测"⇒ 猜错了表结构**（`products has no column named id`）
+   ⇒ ⭐ **又是"凭印象"** ✗ **改成读建表语句** ✓（**第七次**）
+
+## 二、⭐ 三项个人检查（**手册点名 ✗ 一个不差** ✓）
+
+```
+eval/l09_personal_checks.py（**新建 ✗ 不碰 erp_cases.py**）
+  l09_personal_target_other ｜ l09_personal_cancel_refusals ｜ l09_personal_cancel_rollback
+⇒ 已登记 `eval/harness.py:62-64` ✗ `:13` 加 import ✓
+```
+
+**⭐⭐ 缺陷还在时的实测 —— 结果有讲究**：
+
+| 检查 | 结果 | 解读 |
+|---|---|---|
+| `target_other` | ⚠️ **FAIL** `A 总预占应只剩 OTHER 的 2，实际 6；若为 0 说明把 OTHER 的货也放掉了` | ✅ **抓住了** |
+| `cancel_refusals` | ✅ **PASS** | ⚠️ **它不是这个缺陷的探测器 ✗ 是拒绝路径的守卫** |
+| `cancel_rollback` | ⚠️ **FAIL** `第二条释放写入失败时，取消不应报告成功` | ✅ **也抓住了 —— 但症状不同** |
+
+⇒ ⭐ **第 2 项为什么 PASS**：**缺陷是"释放没发生"✗ 而它测的是"拒绝路径"** ⇒ **不相干** ✓
+⇒ ⭐⭐ **所以三项里：两项是探测器 ✗ 一项是守卫** ✓
+   ⇒ ⚠️ **"我的检查全红了"不等于"缺陷被抓到"** ✗ **要看红的是哪一项 ✗ 为什么红** ✓
+⇒ ⚠️ **第 3 项必须修好后重跑** ✗ **才能证明回滚真的成立** ✓
+
+## 三、业务红报告
+
+```
+退出码 **1** ✗ {"total":4, "passed":1, "blocking_failed":3, "decision":"block"}
+[BLOCK] cancellation_releases_reservation  125 ms  ⭐ traceback 指向 `eval/erp_cases.py:85`
+[BLOCK] l09_personal_target_other          153 ms  A 总预占应只剩 OTHER 的 2，实际 6
+[PASS ] l09_personal_cancel_refusals       194 ms  拒绝路径四表逐字未变
+[BLOCK] l09_personal_cancel_rollback       154 ms  第二条释放写入失败时，取消不应报告成功
+⇒ ⚠️ **产品用例只用"一个商品 ✗ 一个订单"** ⇒ **抓"没释放"✗ 抓不住"放错了谁的"** ✓
+   ⇒ ⭐⭐ **这正是手册要我另建 `l09_personal_target_other` 的理由** ✓
+```
+
+## 四、⭐⭐ 映射草案（`agent/repair.py` 严格接口 ✗ 已有支架）
+
+```
+它自己写的：「**Pure strict mapper. Context is supplied by the trusted caller ✗ never evidence.**
+  **Hash the original bytes ✗ not a reserialized dictionary.**
+  **invalid reports cannot yield an executable repair task.**」
+⇒ ⭐⭐ 第一句就是手册那句「**报告文字不能扩大授权**」的实现 ✓
+
+产出：`{"status": "**repair_required**", "task": {…}}`
+  `report_sha256` **d1ffd97c…** ⇒ ⭐ **原始 bytes 的哈希** ✓（印证 docstring）
+  `allowed_files`  **["flowerp/service.py"]** ✓
+  ⭐⭐ `scope` **只有 3 项** ✗ 而我传的 `required_cases` 是 **4 项**
+     ⇒ **它自己把 PASS 的那项排除了** ⇒ 正是「**选出阻断失败 ✗ 不自动扩大这次返工**」✓
+  `observations` **空**（**本报告没有 observing 项** ✓）
+```
+
+## 🚩 待本人
+
+```
+⚠️ **§4「本人确认草案」** —— **手册**：「**生成草案后仍要本人确认**」✗
+   「**你确认草案后 ✗ 工作台才委托 Codex 修复**」
+⇒ ⚠️ **我不代签** ⇒ **§5 的修复等这一确认** ✓
+   ⚠️ **而如果你希望我先按"授权连续推进"把 §5 做完 ✗ 我也可以** ——
+     **但记录里会写明"确认栏待本人"** ✓
 ```
