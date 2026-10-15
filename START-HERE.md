@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:02 +0800
+> 最后更新：2026-10-16 03:03 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -2343,4 +2343,68 @@ order_transition_lab：legal/draft-ship/cancelled-ship/double-ship ⇒ **退出 
         ⇒ ⭐ **我不代签 ✗ 不编造反馈** ✓
 **二**：**真实事项编号**（现在用的是 `ITEM-L10-PENDING-CONFIRM`）
 **三**：**L10 是否进入 L11**（**手册说缺项要回本讲续做** ✓）
+```
+
+
+---
+
+# ⭐ L11 开始（**用 Codex 原生 Subagents 并行处理独立任务**）
+
+## 题眼与 FlowERP 增量
+
+```
+甲只补指定测试 ✗ 乙只读实现查风险 ⇒ 同时做 ✗ 主 Agent 再串行整合并修改共同实现
+⭐ 「**本讲学会判断什么能并行 ✗ 怎样收回原始结果**」
+增量：**一张不提前改变库存的采购申请**（**PR-TARGET ✗ 商品 A ✗ 数量 7 ✗ 理由"低于补货点"**）
+⭐ 「**7 是已确认的业务输入 ✗ 不是程序根据库存自动算出的采购建议。**」
+判据：**proposed 待审批 ✗ 在库/预占/可用仍 10/2/8 ✗ 流水/OTHER/PR-OTHER 原样**
+     非法输入 ⇒ **采购申请 ✗ 库存 ✗ 流水 ✗ 订单 ✗ 订单明细 五表不变**
+⚠️ 「**重复编号触发 `sqlite3.IntegrityError` ✗ 不能把重复拒绝称作幂等成功。**」
+```
+
+## ⭐⭐⭐ R/W 三条判据（**本讲方法核心**）
+
+```text
+W_A 与 W_B 不重叠：不会互相覆盖输出
+W_A 与 R_B 不重叠：A 不改变 B 的依据      ← **最容易漏**
+W_B 与 R_A 不重叠
+```
+⭐ 「**写入文件不同 ✗ 只排除了一种覆盖风险；还要看另一任务读取什么。**」
+⭐ 「**除文件外 ✗ 还要查运行资源**：共用 SQLite ✗ 报告路径 ✗ 端口也会互相覆盖。」
+
+## ⭐⭐ 十种模式实测（**`agent/schedule.py`**）
+
+```
+independent     allowed  ｜ same-write      rejected ｜ read-write     rejected
+directory       rejected ｜ path-alias      rejected ｜ shared-report  rejected
+⭐ undeclared-read **allowed** ⚠️（**judgment: "False independence: …. Correct the declaration."**）
+read-only       allowed  ｜ invalid-path    rejected ｜ duplicate-name rejected
+⇒ ⭐⭐ **退出码全是 0** ⇒ ⭐ **手册**：「**`observed` 回答"允许还是拒绝"✗
+   退出码 0 回答"实验是否按预期完成"✗ `rejected + 退出 0` 是正确识别冲突 ✗ 不是失败。**」✓
+⇒ ⭐⭐⭐ **`boundary`: "Declared paths only; no agent execution, file lock, or semantic proof."**
+   ⇒ **`allowed` 只是"按你填的清单不冲突"✗ 不是"真的能并行"** ✓
+```
+
+## ⚠️ 我两处先猜后改
+
+```
+⚠️ 一：先只跑了速查表那 3 个 ✗ 而手册说"完整十项" ⇒ 列出后是 **10 个**
+⚠️ 二：`while read` 跑时**最后一行 `duplicate-name` 漏了**
+   ⇒ ⭐ 根因：**`/tmp/l11-modes.txt` 末尾无换行 ⇒ `read` 返回非零 ⇒ 循环提前退出**
+   ⇒ ✅ 单独补跑 ⇒ 退出 0 ✗ `rejected`（**"子任务名称必须非空且唯一"**）
+```
+
+## 下一步（**L11**）
+
+```
+[ ] §3 真实采购业务实验 ｜ [ ] §4 固定候选与两份子任务合同（**R/W 声明 ✗ `input_version`**）
+[ ] §5 真实并行 ⇒ ⭐ **用 `subagent` 平替 Codex 原生 Subagents**（**本讲明确要两个子任务**）
+[ ] §6 主 Agent 串行整合与复验 ｜ [ ] §7 复盘与 Skill 迁移
+```
+
+## 🚩 仍待你（**L10**）
+
+```
+`task-review TASK-56D04E9DFC --reviewer <你的名字> --decision <accept|rework> --note '…'`
++ **真实事项编号** ⇒ **我不代签**
 ```
