@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:15 +0800
+> 最后更新：2026-10-16 04:16 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -6188,5 +6188,76 @@ purchaseActions(<库里那张>) ⇒ <button … data-action="purchase-approve" �
 [ ] §6 同伴复验与迁移（如实标「仅自查」）
 [ ] ⚠️ §5.1 的「客户候选」仍是 --source working-tree 的副本，不是真实交付包 ⇒ 如实标
 [ ] ⭐ 写 SUBMISSION.md（把「体验层缺陷」与「数据层安全」分清）
+[ ] 🚩 待本人定九件
+```
+
+---
+
+# ⭐⭐⭐⭐⭐ L14 §7：静态检查查出两条真问题，其中一条的机理找到了
+
+## 先说清限制
+
+```
+我没有浏览器 ⇒ 做的是静态检查（读 HTML/CSS/JS）
+web-state-review Skill 自己说：「AI 的评语不能替代实际操作证据」
+⇒ 下面每条都标清「静态检查结果，不是走查记录」；真实键盘/窄屏走查待本人或同伴
+```
+
+## 静态检查五项
+
+```
+① viewport meta ✅ <meta name="viewport" content="width=device-width,initial-scale=1">
+② tabindex 0 处 ⇒ 靠原生元素顺序
+③ :focus-visible{outline:3px} + skip-link:focus ✅
+④ @media 12 处，断点 1200/1100/760 ⇒ 手册说的 390 像素被 760 覆盖
+⑤ .table-scroll{overflow:auto} ✅
+```
+
+## 问题 ①：我加的「最新状态未知」提示在窄屏下被 CSS 隐藏
+
+```
+@media(max-width:760px){ … .sync-state{display:none} … }
+⇒ 而我把「最新状态未知（上次成功查询 …）」写进了 #sync-state span
+  ⇒ 宽度 ≤760px 时看不到那句
+⇒ 是「关键动作不能只存在于看不到的侧栏」的同类
+⇒ 所幸：setPurchaseStatus 也把提示写进 #purchases-table，markEvidenceStale 写进 #drawer-content
+  ⇒ 所以窄屏下表格与抽屉里各有提示
+  ⇒ 结论：缺口没有想象的大，但 #sync-state 那一路窄屏确实看不到 ⇒ 如实记
+```
+
+## 问题 ②：「Escape 后焦点不回到原按钮」的机理
+
+```
+restoreActionFocus(trigger) 的守卫里有：if(… || trigger.disabled || …) return;
+confirmAction 的 close(result)：if(!result.confirmed) restoreActionFocus(trigger);
+Escape ⇒ dialog-cancel.click() ⇒ close({confirmed:false}) ⇒ 会去恢复
+⚠️ 但 runAction 的 finally 才做 button.disabled=false
+⇒ 时序：runAction 开头把按钮 disabled=true（文案变「处理中…」）
+   ⇒ 弹确认框 ⇒ Escape ⇒ close({confirmed:false}) ⇒ restoreActionFocus(trigger)
+   ⇒ 那时 trigger.disabled 仍是 true ⇒ 第四道守卫 return ⇒ 焦点没回去
+⇒ 这就是手册说的「Escape 退出后焦点没有回到原按钮，这是尚未修复的实际缺口」
+  ⇒ 我的候选有同一份代码 ⇒ 同样有这个缺口
+    ⇒ 而它是另一个问题，不属于本讲主线 ⇒ 如实记，不顺手改（改了会让本讲 diff 混进无关修复）
+```
+
+## 这一节没做到的
+
+```
+❌ 真实键盘走查（要浏览器）
+❌ 390 像素窄屏走查
+❌ 五问走查（要未参与实现的同伴）
+❌ 「换一个对象再次走查」
+❌ 「耗时导出」的迁移实现（只做到设计层）
+⇒ 都记入待办，其中「同伴」那一项只能由本人安排
+⇒ 不能把静态检查写成「走查通过」
+```
+
+## 待办
+
+```
+[ ] 两条静态检查发现写进 SUBMISSION 的「未完成」
+[ ] ⭐ 写 SUBMISSION.md（七节，按 Skill 三分法）
+[ ] 🚩 真实键盘、390px 窄屏、五问走查 ⇒ 需浏览器与同伴 ⇒ 待本人
+[ ] 耗时导出的迁移（设计层先写，实现待做）
 [ ] 🚩 待本人定九件
 ```
