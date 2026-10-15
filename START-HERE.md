@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 02:31 +0800
+> 最后更新：2026-10-16 02:33 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -1259,5 +1259,78 @@ ci_staging/eval-a-false-green.yml    A 用（**只改一处：吞掉失败传播
 
 ```
 **建候选分支 ✗ Actions variables（`L08_FLOWERP_REPOSITORY` ✗ `L08_FLOWERP_SHA`）✗
+ 推送 ✗ PR ✗ 真实 Run** —— **全在你的远程仓库上** ✓
+```
+
+
+---
+
+# ⭐ L08 §5 续五~八（**四表核对 ✗ 补原始 stdout ✗ A/B 本地对照 ✗ B 的 Spec**）
+
+## ⭐ 四表状态（**手册要的最后一样** ✓）
+
+```
+报告里那条失败的 evidence **4072 字符** ✗ 而完整 AssertionError 是 **5223** ⇒ **被截断** ⚠️
+直接跑产品侧那条用例（`eval/erp_cases.py:277`）：
+  `:281` tables = ("stock_balance","stock_reservations","sales_document_lines","sales_documents")
+  `:282` for mode in ("**success**","**shortage**","**second_write_failure**")  ← **与手册 §2 三种一一对应**
+  `:316` assert [b["reserved"] for b in balances] == **[2, 3]**
+  `:317` assert [b["available"] for b in balances] == **[3, 2]**
+  ⇒ 四表**全在** ✓ 而 `before`/`after` **不是键名** ⇒ **表数据拼进了断言消息的文本里** ✓
+⇒ ⭐ **四表状态拿到了 ✗ 但它是"人可读 ✗ 机器难读"** ✓
+⇒ ⭐⭐ **正好接上 L06 那句**：「**报告写出 JSON 只证明有结构化输出 ✗ 消费者还要核对…**」✓
+```
+
+## ⭐ 由此补的一样（**趁没开始跑 A** ✓）
+
+```
+⚠️ 报告会被截断 ⇒ 完整四表只在原始 stdout 里 ⇒ **门禁步 `| tee harness-stdout.txt`** ✗ 加进上传 ✓
+⚠️ **关键：`PIPESTATUS` 而不是 `$?`** —— **`| tee` 之后 `$?` 是 tee 的退出码（永远 0）** ✗
+   ⇒ **写错这一处 ⇒ 会把内部红读成绿** ⇒ **正好是本讲的题目** ✓
+⚠️ 两份都加 `shell: bash`（**`PIPESTATUS` 在 `sh` 下不存在** ✓）
+```
+
+## ⭐ A/B 的受控对照（**本地逐字验证** ✓）
+
+```
+② B 的形态（`exit "$status"`）⇒ REAL_HARNESS_EXIT=**1** ✗ 这层退出码 **1** ✓
+③ A 的形态（`exit 0`）        ⇒ REAL_HARNESS_EXIT=**1** ✗ 这层退出码 **0** ✓
+   ⇒ ⭐ **真实退出码仍被写出 ⇒ 矛盾可查** ✓
+④ 四表在留存的 stdout 里各 1 次 ✓（**4728 字节**）
+⇒ ⭐⭐ **A 与 B 的唯一差别 = 门禁步最后那一行** ✓
+```
+
+## ⭐ B 的 Spec（**已过 L03 解析入口 ✗ 退出码 0** ✓）
+
+```
+落盘 `/home/rchua/GO/CodexFDE/.runtime/l08-learning/L08-B-SPEC-01.md`（50 行）
+`workbench.spec.parse_spec` ⇒ ✓ 六段齐 ✗ 顺序对 ✓
+   **来源 → 目标 → 非目标 → 约束 → 验收用例 → 完成定义**
+
+⚠️ **我先按印象写了六段**（目标/范围/事实/验收/未知/依据）⇒
+   ✗ **ValueError: Spec 包含未知章节** ⇒ **只认出"目标"** ✓
+⇒ ⚠️⚠️ **而 \`workbench/spec.py:10\` 的 REQUIRED_SECTIONS 就在那里** ✗
+   **我 L07 写的那份也用的正是正确的六段** ⇒ ⭐ **手边有正确样例却照印象写** ✓
+⇒ ⭐ **这是本会话第五次"凭印象下结论 ✗ 没读实际合同"** ✓
+
+**B 只改一行**：
+     -          exit 0
+     +          exit "$status"
+⇒ ⭐ **"修复"= 删两行注释 ✗ 把 exit 0 换成 exit "$status"** ✓
+```
+
+## 待审产物（**活动的 81 行一字未动** ✓）
+
+```
+ci_staging/eval.yml                 148 行  ← B/C 用（`exit "$status"`）
+ci_staging/eval-a-false-green.yml   133 行  ← A 用（`exit 0`）
+⇒ ✅ 两份 `--case` 名单逐字相同 ✗ 两份 YAML 合法 ✗ 都声明 `shell: bash` ✓
+⇒ ⚠️ `.github/workflows/eval.yml` md5 仍是 `e45447e9…` ✓
+```
+
+## 🚩 仍在等你
+
+```
+**建候选分支 ✗ Actions variables（`L08_FLOWERP_REPOSITORY` / `L08_FLOWERP_SHA`）✗
  推送 ✗ PR ✗ 真实 Run** —— **全在你的远程仓库上** ✓
 ```
