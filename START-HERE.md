@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:35 +0800
+> 最后更新：2026-10-16 03:37 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -4108,3 +4108,78 @@ def dispatch(self, method, raw_path, headers, body) -> PlatformResponse:
 [ ] 写六段式 Spec ⇒ 实现 ⇒ **先红后绿 ✗ 同版本复验 ✗ 完整阻断回归**
 [ ] §5 真实采购核对 ✗ §6 同伴复验 ✗ 迁移
 [ ] 🚩 **事项编号 ✗ 工作台 8001 登记** ⇒ **待本人**
+
+---
+
+# ⭐⭐⭐ L13 实现第 1 步：提交键（`workbench/task_store.py`）
+
+## ⚠️⚠️ 三处我自己的失误（同一类，连续三次）
+
+```
+⚠️ 我用 Python 脚本改文件，连续三次把缩进写错：
+   ① CREATE TABLE ... task_events(           ⇒ 真实 16 空格，我写 20
+   ② execution_timeout_seconds: int = 900,   ⇒ 真实  8 空格，我写 12
+   ③ ) -> dict:                              ⇒ 真实  4 空格，我第三次写 8
+⇒ 三次都是「猜空白」而不是「看空白」
+⇒ ✅ 幸运的是每次都有 assert t.count(old) == 1
+   ⇒ 脚本在写入之前就退出，文件一次都没被改坏
+     ⇒ ⭐ 那道断言三次挡住了半途写入
+⇒ ✅ 最后换 edit 工具按字面匹配 ⇒ 成功（它也失败过一次：锚点不唯一）
+```
+
+**教训**：
+```
+① 不用字符串拼接改别人的代码，用按字面匹配的编辑工具
+② ⭐ 要改之前先 read 那一段，让工具显示真实缩进（我第 22 步才这么做）
+③ 断言 count == 1 是必须的，它救了三次
+④ 短句锚点不唯一，要带上下文
+⑤ ⚠️ 写 Markdown 时不要在 Python 的 """ 里再写 """（会提前结束字符串）
+```
+
+## ⭐⭐ 改了什么（五处）
+
+```
++ import hashlib
++ class Conflict(RuntimeError)   —— 同一个提交键被用于不同内容
++ CREATE TABLE IF NOT EXISTS task_submissions(submit_key PRIMARY KEY, task_id, fingerprint, created_at)
++ create(..., submit_key: str | None = None)
++ 语义：同键同指纹 ⇒ append_event("同键同内容重放，返回原任务") 并 return self.get(原任务)
+        同键异指纹 ⇒ raise Conflict("提交键已用于不同需求；请使用新键")
++ 事务内 INSERT INTO task_submissions(...)（与任务行同事务）
+```
+
+## ⭐⭐⭐ 三处设计取舍
+
+```
+① 指纹含八项（不只 request）：加上 spec_path / execution_mode / automation_mode / write_scope
+   ⇒ 理由：这四项任一变了，就不是同一件事（verify → codex 不能沿用旧受理）
+   ⇒ 代价：更严 ⇒ 更易 409；而这是安全方向的误判
+     （同 L12「同键异对象不能借用旧成功」）
+② 新表而不是给 tasks 加列：task_submissions 的主键是 submit_key
+   ⇒ 数据库层面保证「一个键只指向一个任务」；加列做不到（tasks 主键是 id）
+③ 重放也写事件：状态没变（仍 queued），但事情发生了，所以该留事件
+   ⇒ 正是参考实验 event_version：version 5→5，event_count 9→10
+```
+
+## ⭐⭐⭐ 实测五种情形（全对）
+
+```
+① 第一次（K-1）      ⇒ TASK-709A99FC28，status queued
+② 同键 + 同内容       ⇒ 同一个 ID，任务数 1（没新建）
+③ 同键 + 改 request   ⇒ ✅ Conflict: 提交键已用于不同需求；请使用新键
+③ 同键 + 改 actor     ⇒ ✅ 同上
+③ 同键 + 改 business_refs ⇒ ✅ 同上，任务数仍 1
+④ 不同键（K-2）      ⇒ TASK-87A6EDD0FB，任务数 2
+⑤ 不带键             ⇒ TASK-BBCC5ECAAB，任务数 3（向后兼容）
+⭐ 重放的事件（从库里读）：queued「同键同内容重放，返回原任务」actor=林舟
+```
+
+## 待办
+
+```
+[ ] 两个 HTTP 端点 + 409 出口 + 最小权限（codex ⇒ 400）
+[ ] create() 的 submit_key 接到 HTTP 层（现在还没调用方传它）
+[ ] 新增 eval/cases.py::task_api_submit_and_query，并注册到 harness.py:110 mods
+    ⇒ ⚠️ L11 的教训：不注册就是假绿
+[ ] 先红后绿 ｜ 同版本复验 ｜ 完整阻断回归 ｜ §5 真实采购 ｜ §6 同伴复验与迁移
+```
