@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:37 +0800
+> 最后更新：2026-10-16 03:39 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -4182,4 +4182,84 @@ def dispatch(self, method, raw_path, headers, body) -> PlatformResponse:
 [ ] 新增 eval/cases.py::task_api_submit_and_query，并注册到 harness.py:110 mods
     ⇒ ⚠️ L11 的教训：不注册就是假绿
 [ ] 先红后绿 ｜ 同版本复验 ｜ 完整阻断回归 ｜ §5 真实采购 ｜ §6 同伴复验与迁移
+```
+
+---
+
+# ⚠️⚠️ L13 一处必须更正的判断：**"两个端点不存在"是错的**
+
+## 我错在哪
+
+```
+⚠️ 我在前两份记录里写：「本讲的增量：两个最小 API 端点不存在」
+   依据：关键词扫描 status_url / delivery-view / 409 都没找到
+⇒ ⚠️⚠️ 而这个依据推不出那个结论
+   ⇒ ⭐⭐⭐ 「找不到某三个关键词」只说明那三样不在，
+     不能说明「两个端点不存在」
+⇒ ✅ 真相（真起服务、真发请求测出来的）：
+   ⭐ POST /api/v1/tasks 存在，返回 202
+   ⭐ GET /api/v1/tasks/<id> 存在，返回 200
+   ⭐ 幂等存在（projects.idempotent）；具名操作者也存在（不给 actor 就 422）
+   ⭐ 同键同内容真的返回同一个 ID
+```
+
+⇒ ⭐⭐⭐ **根因与 L12 那次一样：用「我没扫到」代替「我查过了」**
+   （**L12 是"我没找到那个 Skill 文件"**）⇒ **同一个毛病，第二次**
+   ⇒ ✅ 纠正办法相同：**真的跑一次，不看代码猜**
+
+## ⭐⭐⭐ 真起服务测出来的四条缺口（**这次是测的**）
+
+```
+① POST ⇒ 202，TASK-8D347D6101，status queued
+   ⚠️ 响应里没有 status_url，也没有 view_url（22 个响应键都不含它们）
+② 同键同内容 ⇒ 202，⭐ 真的同一个 TASK-8D347D6101
+③ ⚠️ 同键异内容 ⇒ 422「同一个 Idempotency-Key 不能用于不同请求」
+   ⇒ 手册与参考实验要求 409，实际 422
+   ⇒ 根因：project_store.py:109 抛 ValueError，而 dispatch 把 ValueError 统一转成 422
+     ⇒ ⭐⭐ 「参数写错了」与「这个键已属于别的请求」是两种事实
+       前者可改参数重试，后者必须换键；给同一个码会让调用方做错事
+④ GET /api/v1/tasks/<id> ⇒ 200（存在）
+⑤ ⚠️ GET /api/v1/delivery/views/<id> ⇒ 404「Harness API 路径不存在」
+⑥ GET /api/v1/tasks/TASK-MISSING0 ⇒ 404（对）
+⑦ ⚠️⚠️ 网页入口带 execute_code: true ⇒ 202 竟然成功了（TASK-7FEE6D4B63）
+   ⇒ 参考实验是 400 code_mode_rejected，我这里放行
+   ⇒ ⭐⭐⭐ 这正是合同的「最小权限」那一条
+     ⇒ 我前面以为「最小权限已经在」也是错的：那条只校验
+       「必须具名 / 必须带键」，不校验「网页只许 verify」
+```
+
+## ⭐⭐ 另外两处更正
+
+```
+⚠️ ① REQ-1 不合法：spec.py:59 用 r"REQ-[A-Z0-9][A-Z0-9._-]{2,63}"
+   ⇒ 前缀后至少 3 个字符，REQ-1 只有 1 个
+   ⇒ 合法的：REQ-L13-01 / REQ-COURSE-L13；空则自动生成 REQ-AUT…
+⚠️ ② 「两个 None 相等」这个陷阱我又踩了一次：
+   第一次探针 tid == bd2.get("id") 打印 True，因为两次都是 None
+   ⇒ 改法：加 `tid is not None`，并打印真实的两个值
+   ⇒ 与 L12「只打印 save_error 就下结论」同族：判断要看到值本身
+```
+
+## ⭐⭐⭐ 四条缺口的修法（按优先级，④最重）
+
+```
+④ ⭐⭐⭐ 最小权限漏了：POST 要拒绝 execute_code: true ⇒ 400，
+   消息说明「网页API只允许verify；代码执行须使用明确授权的课程CLI」
+   ⇒ 这是安全性问题，不是体验问题
+③ ⭐ 冲突码：idempotent 冲突时抛专门的异常类型，dispatch 转成 409
+① ⭐ 202 响应加 status_url / view_url
+② ⭐ 新增 GET /api/v1/delivery/views/<id>
+```
+
+## ⚠️ 下一轮先要判断的一件事
+
+```
+⚠️ 我已经改了 task_store.py（加了 submit_key 与 task_submissions 表）
+   ⇒ 而探针显示 projects.idempotent 已经能做同键幂等
+     ⇒ 那我的改动是不是重复了？
+     ⇒ ⭐ 区别：projects.idempotent 作用域是**项目**，记的是**整个响应 JSON**，
+       不记「这个键属于哪个任务」
+     ⇒ 所以两者是两层：HTTP 幂等（响应级）/ 任务身份（任务级）
+       ⇒ ⚠️ 但不能只用一层就说「够了」：要么说清两层各自负责什么，
+         要么合并成一层 ⇒ 下一轮处理
 ```
