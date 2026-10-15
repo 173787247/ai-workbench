@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:40 +0800
+> 最后更新：2026-10-16 04:41 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -8226,4 +8226,69 @@ B 必须重写：报表的列名来自报表自己的定义，不能照搬库存
 [ ] ⭐ 读 course_workspace.prepare 的 qualified_ref 参数
 [ ] 写 B 的六段需求（含「未找到可用记忆」，基线如实标注）
 [ ] 🚩 待本人：A 的具名审核（TASK-AD82BFE14C 的 approve）
+```
+
+---
+
+# 🎉 L15 解开：--session-baseline-ref 接受任意裸 commit
+
+## 机制原文
+
+```python
+# course_workspace.py
+:39  revision = baseline_ref if qualified_ref else f"refs/tags/{baseline_ref}"   # 关键一行
+:41  git worktree add --detach <target> <revision>
+:57  if lesson_number: apply_student_start(target, lesson_number)   # 剥离起点增量
+
+# course_delivery.py
+:78  if session_baseline_ref:
+:79      git rev-parse --verify f"{session_baseline_ref}^{commit}"  → 失败：会话基线无法解析为 Git 提交
+:85      git merge-base --is-ancestor <baseline_commit> <resolved> → 失败：须位于本讲固定起始基线之后
+:91      worktree_ref = resolved.stdout.strip()
+:92      qualified_ref = True
+```
+⇒ 两个条件：能解析成 commit、是本讲起始基线的后代
+  ⇒ 满足就能用，走 qualified_ref=True，直接 git worktree add --detach 那个 commit
+
+## B 的基线问题有解了
+
+```
+A 的改动未提交 ⇒ 没有现成的 commit
+  而不能动 A 的 worktree（提交会改 A 的候选状态）
+⇒ 正确做法：
+   ① 从 A 的冻结提交 9a4e9ee 新建一个 worktree
+   ② 把 A 的两处改动应用进去（应用 diff，不是复制 worktree）
+   ③ 提交 ⇒ 得到一个 commit
+   ④ 它就是 B 的 --session-baseline-ref
+```
+
+## 为什么这是合法的
+
+```
+那个 commit 只是 B 的起点状态，不改变 A 的 Task 状态
+  · A 仍然是 status=review、reviewed_by=None
+  · A 的候选仍然导不出来（course_release.py:190 照旧拦）
+  ⇒ 而 B 的检查会在这个起点上红：四个报表方法在空结果时仍然抛错
+    ⇒ dynamic_failed 非空、static_failed 为空 ⇒ 起点有效
+```
+
+## 但我必须写明这一层
+
+```
+⚠️ 要在 B 的 Spec、B 的记录、SUBMISSION.md 里都写明：
+   「B 的基线 commit 是我从 A 的冻结点加上 A 的未审核改动生成的，
+     它不代表 A 已被接受；A 的 Task 仍是 review，等人审。」
+   ⇒ 依据：手册「不把失败改写为成功」、辅导资料「不能通过改写历史掩盖错误」
+     ⇒ 而我这样做没有改写历史：A 的 face 没变，B 的起点是新造的 commit，两者可分别回查
+```
+
+## 待办
+
+```
+[ ] ⭐ 造 B 的基线 commit（从 9a4e9ee 建 worktree、应用 A 的 diff、提交）
+    ⇒ 要在新的 worktree 里做，不碰 A 的那个
+[ ] ⭐ 写 B 的六段需求（含「未找到可用记忆」，基线如实标注）
+[ ] B 的检查候选 ⇒ 冻结 ⇒ course-submit（--session-baseline-ref 用那个新 commit）
+[ ] §10 四行证据表、feedback-evidence-review Skill
+[ ] 🚩 待本人：A 的具名审核、reviewed_by
 ```
