@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 05:05 +0800
+> 最后更新：2026-10-16 05:06 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -9737,5 +9737,56 @@ checks = [{name: delivery_evidence_and_review_controls,
 [ ] ⭐ 写独立 FlowERP 的业务检查 ar_aging_export_keeps_columns ⇒ 应先红
 [ ] ⭐ 实现 ar_aging_csv ⇒ 应绿 ｜ 控制仓库 eval/cases.py 加委托包装
 [ ] ⭐ 交付「完成思路 + 代码链接」
+[ ] 🚩 待本人：列规格取舍、具名审核、原使用者复验
+```
+
+---
+
+# 🔍 毕设：澄清「需求的 Spec」是讲次合同的机器投影
+
+## 它生成的 FDE_SPEC.md（2563 字节 49 行）
+
+```
+# REQ-COURSE-L16｜L16 在新环境接手，并完成现场新需求
+## 来源：课程主线合同 L16、前置课次 L15、业务对象 REQUIREMENT:LIVE-DRAW、起始基线 course/l16-start
+## 目标：合同那句「现场抽取一个此前未实现的 FlowERP 小需求，使用工作台完成 Spec、受控执行、
+   Eval、人审和发布证据」+ 工作台增量 + ERP 产品增量 + 课程建设主线等合同字段
+## 非目标：不提前实现后续课次、不改写集外文件、不删除失败证据或绕过具名审核
+## 约束：允许写集 flowerp/ workbench/ eval/ web/ tests/；项目与路径归属说明；
+   本讲复用 Eval delivery_evidence_and_review_controls
+## 验收用例：合同的三条
+## 完成定义：合同的四条
+```
+
+## 所以「需求自动生成任务级 Spec」在本讲实现里是什么
+
+```
+⚠️ 它生成的是讲次合同的参数化投影，不是把我那 486 字变成六段
+   · spec    = 合同的机器投影（每讲一份模板）
+   · request = 我提交的现场需求原文（在 Task.request 键里）
+⇒ 所以那条 Eval 的 label 说得很准：「任务、报告与具名人审可追溯」
+  ⇒ 而真正的六段 Spec 是我自己写的（capstone/03-spec.md，167 行）
+    ⇒ 而新 Eval ar_aging_export_keeps_columns 不在合同里
+      ⇒ 所以要另走课程 CLI，不能只靠首页的 verify
+        ⇒ 正是 workbench_server.py:759「网页API只允许 verify；代码执行须使用课程 CLI」
+```
+
+## 顺带核实四件事
+
+```
+① spec_path 是显示截断：Task 里少 6 字符，真实目录多 40c912
+② 8001 的 --runtime-dir = .runtime/workbench（不是 .runtime/l04-learning）
+   ⇒ 两个 runtime 分开，各自一个 workbench.db ⇒ 正是 AGENTS.md「两套数据目录不得混用」
+③ ⚠️ spec_sha256 = None，在这个 Task 上也空 ⇒ 与 L16 那个一样 ⇒ 普遍现象，原因未查
+④ ⚠️ spec_text 长度 0 ⇒ Spec 在文件里，不在字段里
+```
+
+## 待办
+
+```
+[ ] ⭐ 写独立 FlowERP 的业务检查 ar_aging_export_keeps_columns ⇒ 应先红
+[ ] ⭐ 实现 ar_aging_csv ⇒ 应绿 ｜ 控制仓库 eval/cases.py 加委托包装
+[ ] ⭐ 交付「完成思路 + 代码链接」
+[ ] ⚠️ spec_sha256 为空的原因（两个 Task 都空）
 [ ] 🚩 待本人：列规格取舍、具名审核、原使用者复验
 ```
