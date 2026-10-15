@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:56 +0800
+> 最后更新：2026-10-16 04:58 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -9263,6 +9263,70 @@ out_of_scope_files = []
 [ ] ⭐ K 区：独立恢复教学实验（examples/restore_lab.py）
 [ ] ⭐ L 区：结果导出、实际反馈与真实索引（发布证据索引）
 [ ] ⭐ M 区：合同最终入口与独立演示
+[ ] ⭐ 写 L16 的 SUBMISSION.md（七节，五分钟答辩、技术债、下一事项迁移）
+[ ] 🚩 待本人：事项编号、运行目录、实际构建者姓名、现场需求抽取、答辩、人审、周宁复验
+```
+
+---
+
+# ⭐⭐⭐⭐⭐ L16 I 区完成：四条命令各留退出码，并与基线逐条比对
+
+| # | 命令 | 退出码 | 结果 |
+|---|---|---|---|
+| ① | unittest discover -s tests -v | 1 | Ran 127 tests / FAILED (failures=7, errors=9) |
+| ② | eval.harness --suite blocking | ⭐ 0 | 通过 21 ⇒ {total:21, passed:21, decision:pass} |
+| ③ | agent.loop --max-rounds 3 | ✅ 0 | remaining_failures: []，⚠️ tokens_used: 0 |
+| ④ | agent.graph --require-human-review | ⭐ 3 | status: awaiting_human_review，reviewer: null |
+
+## ① 的 16 条与基线逐条比对
+
+```
+候选：FAILED (failures=7, errors=9) ⇒ 16 条
+基线：FAILED (failures=8, errors=9) ⇒ 17 条
+⭐ diff 只有一行：16d15 → < FAIL: test_loop_stops_when_green
+  ⇒ 「<」= 基线有而候选没有 ⇒ 候选多通过一条，没有引入任何新失败
+⭐ 而且不是 flaky：候选单独重跑那条 OK/OK/OK；基线单独重跑 FAILED (failures=1)
+⭐ 它为什么变绿：tests/test_workbench.py:267 要求 run_loop 在检查全绿时一轮收敛
+   · 基线（检查候选）：新加的 inventory_keyword_spans_pages 是红的 ⇒ 不收敛 ⇒ 红
+   · 正式候选：那条绿了 ⇒ 全绿 ⇒ converged in 1 round ⇒ 绿
+⭐ 16 条固有失败分布：test_course_outline_alignment(7)、test_http_api(6)、
+   test_production_erp(2)、test_workbench(1，就是那条，候选已绿) ⇒ 基线固有，与本讲无关
+```
+
+## ② 完整阻断套件 21/21 全绿
+
+```
+{total:21, passed:21, blocking_failed:0, decision:pass}
+⇒ 注意：完整套件（--suite all）是 22 条，--suite blocking 是 21 条
+  ⇒ 有一条是 observing 级，不是漏跑，是级别过滤
+```
+
+## ③ Loop 退出码 0，但 tokens_used: 0
+
+```
+⚠️ 它没有真的调用模型（没配 API key）
+  ⇒ 而手册恰恰警告：「默认检查收敛不等于实际 Codex 返工」
+    ⇒ 所以 ③ 和 ④ 都不能当作「AI 真的返工过」的证据
+```
+
+## ④ Graph 退出码 3，awaiting_human_review，reviewer 是 null
+
+```
+status = awaiting_human_review；rounds = 1
+reviewer = null；review_decision = null；reviewed_at = null
+⇒ 退出码 3 = 停机等待人审，而不是「批准」
+  ⇒ 正是手册「自动演示批准不能代替人的决定」
+    ⇒ 也呼应 AGENTS.md：acceptance 的 pending_human_review 是事实字段，不是界面标签
+```
+
+## 待办
+
+```
+[ ] ⭐ J 区：正式 Task 人审（task-review，回控制实例，🚩 待本人）
+[ ] ⭐ K 区：独立恢复教学实验（restore_lab.py --output-dir 新目录）
+[ ] ⭐ L 区：结果导出与索引（task-show > task-<ID>-<uuid>.json）
+    ⚠️ course-candidate-export 仅在 status=completed 时执行 ⇒ 本轮不能做
+[ ] ⭐ M 区：合同最终入口与独立演示（demo --runtime-dir 新目录；会重置教学账本）
 [ ] ⭐ 写 L16 的 SUBMISSION.md（七节，五分钟答辩、技术债、下一事项迁移）
 [ ] 🚩 待本人：事项编号、运行目录、实际构建者姓名、现场需求抽取、答辩、人审、周宁复验
 ```
