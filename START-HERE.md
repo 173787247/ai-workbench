@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:13 +0800
+> 最后更新：2026-10-16 03:14 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -2870,4 +2870,68 @@ R6：`reject_purchase` ⇒ `approved_by='alice'` ✗ ✅ **已驳回入库被拦
       `--suite blocking`（**全套** ✓）
 [ ] ⚠️ **R3**：**不在本讲合同核心** ⇒ **本讲至少记录并把触发输入交回** ✓
 [ ] ⚠️ **我的两处合同错误**（**读集不存在 ✗ `input_version` 合并算法没写进合同** ✓）
+```
+
+
+---
+
+# ⭐⭐⭐ L11 §6 完成：修复 ✗ 同版复验三件全过
+
+## ⭐ 动手前的关键发现：整仓的判据与候选**不一致**
+
+```
+`models.py:166 require_positive` ⇒ raise **`ValidationError`** ✓
+⇒ ⭐ `ValidationError(DomainError→RuntimeError)` ⇒ **不是 `ValueError` 的子类** ✓
+⇒ ⚠️ **所以"照整仓那样用 `require_positive`"会让两处同时红**：
+   既有用例 `cases.py:122-127` 与甲的 `assertRaises(ValueError)` ✓
+⭐ **而 `require_positive` 在五个模块里都用**（`finance` ✗ `inventory` ✗ `pricing` ✗
+   `purchasing` ✗ `sales`）**⇒ 只有 `service.py` 没用** ✓
+   ⇒ ⭐ **比乙的"同类守卫还在"更强的证据** ✗ **但异常类型与契约冲突 ⇒ 需求未定** ✓
+```
+
+## ⭐ 实际改动（**唯一一个 hunk ✗ 比照抄 HEAD 更严**）
+
+```diff
+-        if quantity <= 0 or not reason.strip():
++        if quantity <= 0 or not (reason or "").strip():
+             raise ValueError("采购数量和原因不能为空")
+```
+⇒ ⭐ **HEAD 是 `not reason.strip()` ⇒ `reason=None` 时 `AttributeError`** ✓
+   ⇒ **我的是 `(reason or "")` ⇒ `"   "` ✗ `""` ✗ `None` 三种都拒绝 ✗ 不崩** ✓
+   ⇒ **而 `None` 正是乙 R1 附带指出的第二处** ✓
+
+## ⭐⭐⭐ 同版复验三件（**手册 §6 的命令 ✗ 全过**）
+
+```
+① `unittest tests.test_l11_purchase -v`
+   改前 **退出码 1 ✗ FAILED (failures=3)** ⇒ 改后 ⭐ **退出码 0 ✗ `Ran 13 tests ✗ OK`** ✓
+② `--case purchase_request_preserves_reason --case write_sets_reject_conflict`
+   ⇒ ⭐ **退出码 0 ✗ `{"total":2, "passed":2, "decision":"pass"}`** ✓
+③ `--suite blocking`（全套）
+   ⇒ ⭐ **退出码 0 ✗ `{"total":21, "passed":21, "blocking_failed":0}`** ✓
+`service.py`：剥离版 `3be55a4ad4261215` ⇒ **修复版 `449a0c7b64d0e337`** ｜ HEAD blob `21fc796`
+⇒ ⭐ **三个值 ✗ 三个版本 ✗ 报告能指明"哪一份被检查过"** ✓
+```
+
+## ⭐ 范围核对（**快照证明 ✗ 不是嘴上说**）
+
+```
+新增 `['tests/test_l11_purchase.py']` ✗ 修改 `['flowerp/service.py']` ✗ **越界：无** ✅
+```
+
+## ⚠️ 本轮**没有**做的（**如实列**）
+
+```
+❌ **R3 不修** ⇒ ⭐ **辅导资料明说"批准与实际收货留到 L12"** ✗ **且 HEAD 同样有** ✓
+❌ **R4 不修** ⇒ **需求未定**（异常类型契约冲突 ✓）✗ **R5 需求未定 ✗ R6 不构成绕过** ✓
+❌ **没有真正的单 Agent 耗时/Token 对照** ⇒ ⭐ **手册说那是挑战任务 ✗ "没有真实测量就写未测量"** ✓
+❌ **并行执行的时间重叠仍未证明** ✓
+```
+
+## 🚩 下一步
+
+```
+⭐ **手册 §6 链的最后一环：「实际负责人：接受或退回」** ⇒ **待本人**（**我不代签** ✓）
+⭐ **§7 复盘 ✗ 挑战与 Skill 迁移**：`parallel-task-review` 的审查规则与反例逐个交给代码 ✗
+   **迁移到"业务接口修改与页面实现"** ✗ **填提交模板第 6 节** ✓
 ```
