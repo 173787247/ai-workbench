@@ -5495,3 +5495,75 @@ flowerp/__main__.py：from .server import serve；--host/--port/--runtime-dir，
 [ ] 读第 1~3 步与第 4 步的两个提示词；读 SUBMISSION 模板
 [ ] 🚩 待本人定九件（本讲新增：真实 Task ID ⇒ 交付包位置）
 ```
+
+---
+
+# ⭐⭐⭐⭐⭐ L14：候选里已经有序号机制（缺陷比我预想的窄）
+
+## 运行前提比手册简单
+
+```
+⭐ flowerp 可导入、flowerp.server.serve 可导入（用控制解释器 sys.path.insert(0,'.') 即可）
+⇒ 手册 §5.2 说要给隔离副本建独立 .venv 并 pip install -e .
+  ⇒ 而本候选不需要：纯标准库、没有第三方依赖
+    ⇒ 如实记：我走了更短的路，而手册那条路也能走
+```
+
+## 候选里已经有那三样里的两样半
+
+### ① 请求序号 —— 有，且「发出时更新」
+
+```javascript
+:9   state.inventoryRequest: 0
+:198 const purchaseRequest = page==="purchases"
+       ? (state.purchaseRequest = (state.purchaseRequest||0)+1) : null;   // 发出时 +1
+:205 if(page==="purchases" && purchaseRequest!==state.purchaseRequest) return;
+:211 if(page==="purchases" && purchaseRequest!==state.purchaseRequest) return;
+:215   if(purchaseRequest!==state.purchaseRequest) return;
+:229 if(current && (page!=="inventory" || inventoryRequest===state.inventoryRequest)
+                && (page!=="purchases" || purchaseRequest===state.purchaseRequest)) …
+⇒ 正是辅导资料要求的「序号在请求发出时更新」与「返回时核对仍是允许生效的请求」
+```
+
+### ② 失败时清空并说明 —— 有
+
+```javascript
+:358 function setPurchaseStatus(value) {
+:359   state.purchaseStatus=value; state.purchases=[]; state.receipts=[];
+:360   const message=value==="failed"?"采购数据加载失败":"正在加载采购数据";
+:361   const help=value==="failed"?"已隐藏旧结果，请恢复连接后点击查询或刷新。"
+                                      :"请等待本次查询完成。";
+:362   $("#purchases-table").innerHTML=empty(message,help);
+:363   $("#receipts-table").innerHTML=empty(message,help);
+:364 }
+⇒ 「已隐藏旧结果」正是辅导资料要的「不能继续显示旧卡片」
+```
+
+### ③ 而「限制需要最新状态的业务动作」—— 还没看到
+
+```
+⭐ 辅导资料：「最新状态未知时，应提示重新查询，并限制需要最新状态的业务动作」
+⇒ setPurchaseStatus 里只看到「清空表格 + 文案」，没看到「停用审批按钮」
+  ⇒ :226 那条只给 #sync-state 加 error 类、改文案为「采购数据加载失败」
+    ⇒ 没有触碰任何业务动作入口
+  ⇒ 所以本讲的缺口很可能是：列表清空了，而详情里的审批按钮仍在
+    ⇒ 但这是推断，下一轮要查（openDrawer("purchase-order") 那些入口）
+```
+
+## 本讲的缺陷假设（待验，不写死）
+
+```
+假设 A：purchases 的列表在失败时清空了，但详情抽屉里的审批按钮没有停用
+假设 B：sales / finance 等页完全没有序号机制 ⇒ 切换页时会串数据
+⇒ 两个假设都要真起服务、真发请求去验，不能只读代码
+```
+
+## 待办
+
+```
+[ ] 用 Python 可靠地列出每页的序号机制（不靠 shell 的 grep -c）
+[ ] 找审批动作的入口（openDrawer、表格里的按钮），看失败时是否停用
+[ ] ⭐ 起 18115、真发请求、复现（要真的走 HTTP）
+[ ] 读 5.3/5.4、第 1~3 步、第 4 步提示词、SUBMISSION 模板
+[ ] 🚩 待本人定九件
+```
