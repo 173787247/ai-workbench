@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 02:37 +0800
+> 最后更新：2026-10-16 02:40 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -1487,4 +1487,84 @@ eval/l09_personal_checks.py（**新建 ✗ 不碰 erp_cases.py**）
 ⇒ ⚠️ **我不代签** ⇒ **§5 的修复等这一确认** ✓
    ⚠️ **而如果你希望我先按"授权连续推进"把 §5 做完 ✗ 我也可以** ——
      **但记录里会写明"确认栏待本人"** ✓
+```
+
+
+---
+
+# ⭐ L09 §4~§5（**三个任务 ✗ 修复 ✗ 复验全绿**）
+
+## ⭐ 三个任务：一个失败 ✗ 一个成功
+
+| 任务 | 结果 |
+|---|---|
+| `TASK-F032581268` 映射器建设 | `queued` ⚠️ **我先把检查写好再建任务 ⇒ 它是"记录"✗ 不是"委托"** |
+| `TASK-F81A6C2BC9` 业务修复 | ⚠️ **`failed`：`编码候选包含链接或重解析点`** |
+| ⭐ `TASK-224B5F97B6` 复验（**关联前者**）| ✅ **`review`** ✗ **修复完成** |
+
+### ⭐⭐ 失败原因（`workbench/execution.py:215-217`）
+
+```python
+strict = task.get('authorization_policy') == 'v0'
+before = self._snapshot(strict=strict)
+if strict and any(state.digest.startswith('link:') for state in before.values()):
+    raise ValueError('编码候选包含链接或重解析点，请先核对隔离目录')
+```
+**实测**：候选里链接 **4 个 ✗ 全来自 `.venv`** ✗ **非 `.venv` 的 0 个** ✓
+**对照**：**L05 的候选没有 `.venv` ⇒ 它的任务成功了** ✓
+⇒ ⭐ **规则：`v0` 严格模式下候选不能有 `.venv`** ✗ **`task-run` 的解释器来自控制仓库** ✓
+⇒ ✅ **删掉 `.venv`**（**删前核对了绝对路径 ✗ 是真目录 ✗ 在候选内** ✓）⇒ 链接 0 ✗ `flowerp/` 完好 ✓
+
+### ⚠️ 重跑被拒 ✗ 而它给的正是出路
+
+```
+「**当前任务不能重跑；待审核任务须先由人工决定返工或创建关联复验任务**」
+⇒ ⭐ **没有 `task-retry`** ✗ **`task-review` 要具名的人 ⇒ 我不代签** ✓
+⇒ ✅ **走第二条：`task-create --source-task-id TASK-F81A6C2BC9`** ✓
+⇒ ⚠️ 手册：「**不能重新准备来顶替旧失败**」⇒ ✅ **同一个候选 ✗ 没重新 prepare** ✓
+```
+
+## ⭐⭐ 修复（**工作台执行器写的 ✗ 不是我手改** ✓）
+
+```
+`67b86732…` → **`0663356d…`** ✗ `:267` **`if status == OrderStatus.RESERVED:`**（**短路推动了** ✓）
+`evidence.json`：`changed_files` **["flowerp/service.py"]** ✗
+  `change_manifest` 前后哈希与我量的一致 ✓ ✗ `diff` **只改一处** ✓
+⚠️ `invocation.command[0]` = `…/codex-substitute.sh` ⇒ **不是 Codex** ✓
+```
+
+## ⭐⭐ 复验全绿
+
+```
+`reproduce`（--case l09_personal_target_other）⇒ 退出码 **0**
+  [PASS] 两单归属：TARGET 释放 4/3；总预占 2/1 可用 8/7；在库 10/8 不变；OTHER 逐字未变
+三项 + 产品用例 ⇒ **0** ✗ {"total":4, "passed":4, "decision":"pass"}
+  ⭐ [PASS] l09_personal_cancel_rollback **回滚：第二条释放写入失败后四张表完全回退**
+     ⇒ **正是我标"必须修好后重跑"的那项 ✗ 从 FAIL 变 PASS ⇒ 事务边界成立** ✓
+完整 blocking ⇒ **0** ✗ {"total":15, "passed":15, "decision":"pass"}
+验收项：改前 blocking 20 项 → 改后 **34 项**（**+14 含我的三项**）⇒ ✅ 未被削弱 ✓
+```
+
+## ⚠️⚠️ 我又犯了一次（**第八次同形**）
+
+```
+我用 `git -C 控制仓库 show "course/l09-start:flowerp/service.py"` 判改动
+⇒ ❌ **控制仓库没有 `flowerp/`** ⇒ **git show 失败 ⇒ 空输出 ⇒ sha256 是空串哈希**
+   ⇒ **它报"14 个文件都变了"✗ 全是假的** ✓
+⇒ ⭐⭐⭐ 与 L06 的"git diff 是空的"、L08 的"没传 --report-path"**完全同形** ✓
+
+✅ **正确口径（各覆盖一半 ✗ 要一起看）**：
+  ① 工作台采集的前后变化 ⇒ 覆盖候选全部文件（**含 flowerp/**）⇒ `["flowerp/service.py"]`
+  ② `source_manifest` 1000 项 ⇒ **只覆盖控制仓库那半边 ✗ 不含 flowerp/** ⇒ `eval/harness.py`
+  ⇒ 合起来恰好是 Spec 的写集 ✓
+  ⇒ ⭐ **而这正是 L05 `reference/参考说明.md` 早写过的**：
+    「**真实执行者的写集应读取执行器采集的前后变化**」✓
+```
+
+## 🚩 待本人
+
+```
+**§6 具名接受** —— `reviewed_by` / `review_decision` / `review_note` **全是 null** ✓
+手册：「**检查通过后等待本人接受**」⇒ **不代签** ✓
+另：**事项编号 ✗ 构建者署名**都是默认值（`ITEM-L09-PENDING-CONFIRM` / `本人（待确认署名）`）✓
 ```
