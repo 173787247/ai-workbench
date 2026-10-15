@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:24 +0800
+> 最后更新：2026-10-16 04:25 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -6884,4 +6884,126 @@ workbench/spec.py:10 REQUIRED_SECTIONS = ("来源","目标","非目标","约束"
 [ ] §5.3 冻结成 commit ⇒ 回控制仓库提交任务 ⇒ §6 核对产品结果
 [ ] §7~§10：Memory 登记、换事项查询、不替人采用、回收效果
 [ ] 🚩 待本人：真实 L14 Task ID、Spec 的「本人确认版」
+```
+
+
+---
+
+# ⭐⭐⭐⭐⭐ L15 §5.2/§5.3 完成：只新增检查、起点红（ImportError）、冻结成 fde24f2
+
+# L15 §5.2 ✗ §5.3 · ⭐⭐⭐⭐⭐ 只新增检查 ✗ 取得真实缺口 ✗ 冻结成提交
+
+- **日期**：2026-10-16｜**候选**：`TASK-PREP-L15-37ac0a0fe9c24c379c57401c51b79cc0`
+- **冻结提交**：**`fde24f2f6023be2814b219bcc049549314a50090`**（`fde24f2 L15: freeze checks for personal requirement`）
+- **证据**：`09-check-frozen/{old,new,after-add}.json`
+
+## 一、⭐⭐⭐⭐⭐ §5.2 只新增检查（**不实现 ✓**）
+
+### 加了什么
+
+```
+⭐ **`eval/cases.py`（+64 行）**：**新增 `raw_feedback_cannot_be_blocking()`** ✓
+⭐ **`eval/harness.py`（+1 行）**：
+   `("raw_feedback_cannot_be_blocking", "blocking", cases.raw_feedback_cannot_be_blocking),`
+   ⇒ **插在 `course_assets_present` 之前** ✓
+⚠️ **我没有创建 `workbench/memory.py`** ⇒ **这是故意的 ✗ 它是"真实缺口"** ✓
+```
+
+### 用例验的四件事（**对应 Spec 的验收段** ✓）
+
+```python
+① `add_feedback(…)` ⇒ `assert feedback["status"] == "pending_review"`
+   ✗ `assert query_memory("空 CSV 列名", path) == []`   # **未审核的反馈不得进入默认检索**
+② `checks = {"blocking_failed": 1, "raw_feedback": [feedback["id"]]}`
+   ✗ `assert checks["blocking_failed"] == 1`             # **原始反馈不得把阻断失败改写为通过**
+③ `review_feedback(…, "LinZhou", "accept", …)` ⇒ `add_memory(…)` ⇒
+   `assert memory["status"] == "active" and memory["version"] == 1` ✓
+   ✗ `query_memory(…, project="flowERP")` **不含跨项目的 `other`** ✓
+   ✗ `revoke_memory(memory["id"], reason="边界写窄了，误用于权限失败", …)`
+     ⇒ `assert query_memory("空 CSV 列名", path) == []`  # **撤回的默认排除**
+④ `adopt_memory(…)` ⇒ `assert adopted["decision"] == "adopted"`
+   ✗ `adopted["memory_version"] == 1` ✗ `adopted["task_id"] == task["id"]`
+   # **采用记录必须指向当时那一版与那个任务**（**对应辅导资料"旧采用记录仍指向当时那一版"** ✓）
+```
+
+### 🔬 起点红：**红了 ✗ 而且是对的原因** ✓
+
+```
+$ python -X utf8 -m eval.harness --suite blocking --case raw_feedback_cannot_be_blocking \
+    --report-path .runtime/l15-start/new.json
+⇒ **退出码 1**
+   `[BLOCK] raw_feedback_cannot_be_blocking   0 ms  **ModuleNotFoundError: No module named 'workbench.memory'**`
+   `{"total": 1, "passed": 0, "blocking_failed": 1, "observing_failed": 0, "decision": "**block**"}`
+⇒ ⭐⭐⭐⭐⭐ **这正是 §5 说的"**取得真实缺口**"** ✓
+   · **红的原因**：**`workbench.memory` 不存在** ⇒ ⭐ **能力缺失**✗
+     **不是环境错 ✗ 不是语法错 ✗ 不是"零个用例"** ✓
+   · **`decision: "block"`** ⇒ **阻断级** ✓
+```
+
+## 二、⭐⭐⭐ 完整套件的对照（**我只增加了检查 ✗ 没破坏别的** ✓）
+
+| 报告 | 时点 | `total` | `passed` | `blocking_failed` | `decision` |
+|---|---|---|---|---|---|
+| **`old.json`** | **改动前基线（21 条）** | — | — | **0** | ⭐ **`pass`** |
+| **`new.json`** | **只加检查 ✗ 未实现** | **1** | **0** | ⭐ **1** | ⭐ **`block`** |
+| **`after-add.json`** | **加检查后的全套件** | ⭐ **22** | ⭐ **21** | ⭐ **1** | ⭐ **`block`** |
+
+⇒ ⭐⭐⭐⭐⭐ **关键读数**：
+   · **`old.json`** ⇒ `--suite all` 时 **21/21 pass** ✓
+   · **`after-add.json`** ⇒ **22 条里 21 条过 ✗ 只有新的那条红** ✓
+     ⇒ ⭐⭐ **所以"新增检查"这件事**没有碰坏任何既有规则**** ✓
+       ⇒ **这正是 Spec 约束⑥"不降低既有阻断规则"的证据** ✓
+
+## 三、⭐⭐⭐ §5.3 冻结检查
+
+```
+$ git status --short
+   D course/baselines/PROGRESSION.json          ← ⭐ 起点本来就删的，**不暂存**
+   M eval/cases.py
+   M eval/harness.py
+   ?? .course/                                  ← ⭐ **不暂存**
+
+$ git add -- eval/harness.py eval/cases.py     ← ⭐ **只暂存检查文件**
+$ git diff --cached --check                    ⇒ ✓ **无空白错误**
+$ git diff --cached --stat
+   eval/cases.py   | 64 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+   eval/harness.py |  1 +
+   2 files changed, 65 insertions(+)            ⇒ ⭐ **只有两个检查文件**
+
+$ git diff --cached --name-only
+   eval/cases.py
+   eval/harness.py                              ⇒ ⭐ **确认没有报告 ✗ 数据库 ✗ 凭据混入**
+
+$ git commit -m "L15: freeze checks for personal requirement"
+⇒ **`fde24f2f6023be2814b219bcc049549314a50090`** ✓
+
+$ git merge-base --is-ancestor course/l15-start HEAD ⇒ ✅ **是的**
+$ git log --oneline course/l15-start..HEAD
+   fde24f2 L15: freeze checks for personal requirement   ⇒ ⭐ **只有那一个提交**
+```
+
+⇒ ⭐ **四项都符合手册 §5.3**：
+   ✅ **暂存内容都在批准范围内** ｜ ✅ **没有报告 ✗ 数据库 ✗ 凭据 ✗ 目标业务修复**
+   ✅ **冻结提交可在控制仓库同一 Git 库解析** ｜ ✅ **位于 `course/l15-start` 之后** ✓
+
+## 四、⚠️ 我这一轮的一个错（**同族第九次 ✗ 又是猜字段名** ✓）
+
+```
+⚠️ 我写 `d.get('cases') or d.get('results') or []` 解析报告 ⇒ 打印 **"共 0 条"** ✓
+⇒ ⭐ **而报告**确实有 22 条**（**stdout 里有 `[PASS]`/`[BLOCK]` 行** ✓）
+   ⇒ ⚠️ **我**又猜了字段名**✗ 这次连"猜错了"都差点被我当成"报告是空的"** ✓
+     ⇒ ✅ **改法**：**先打印 `sorted(d.keys())` ✗ 再取值**（**这一步我这次补上了** ✓）
+     ⇒ ⭐⭐ **同族（第七次是 `app.imports` ✗ 第八次是管道退出码 ✗ 这次是 `cases`）** ✓
+       ⇒ ⭐⭐⭐ **规则**：**凡是要按名字取的东西 ✗ 先**列出实际名字**** ✓
+```
+
+## 五、⭐ 待办
+
+```
+[ ] ⭐ **回控制仓库 ✗ 通过工作台提交任务**（**§5 的第三次位置切换** ✓）
+    ⇒ **输入实际构建者 ✗ 允许修改文件 ✗ 候选路径 ✗ Spec ✗ 用例名 ✗ 基线** ✓
+[ ] **§6 核对产品结果与摘要**（**真 HTTP ✗ 空库 ✗ 看 `suppliers` 是否已有表头** ✓）
+[ ] **§7~§10**：**Memory 登记 ✗ 换事项查询 ✗ 不替人采用 ✗ 回收效果** ✓
+[ ] **读 §1~§4 ✗ §6~§10 细则** ✗ **`SUBMISSION.md` 模板** ✗ **`个人记忆集格式.md`** ✗ **`examples/skills/`** ✓
+[ ] 🚩 **待本人**：**真实 L14 Task ID** ✗ **Spec 的"本人确认版"** ✗ **实际构建者署名** ✓
 ```
