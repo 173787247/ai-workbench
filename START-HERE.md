@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:28 +0800
+> 最后更新：2026-10-16 04:29 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -7245,4 +7245,74 @@ course-submit … --eval-case raw_feedback_cannot_become_blocking …
 [ ] §6 核对产品结果（它新建的 worktree、真 HTTP、空库）
 [ ] §7~§10
 [ ] 🚩 待本人：真实 L14 Task ID、Spec 的「本人确认版」、--actor 真实姓名
+```
+
+---
+
+# 🚨 L15 更正：我把两个候选的状态混了（同族第十二次）
+
+## 我错在哪
+
+```
+⚠️ 我在 03-probe.md 写：「四个导出类型里只有 suppliers 没修，inventory/products/customers 都已硬编码列名」
+⇒ 那段证据是在 TASK-PREP-L14WT-…（L14 的候选）上、端口 18115 测的
+  ⇒ 而 L15 的候选是另一个基线（course/l15-start ⇒ fb4fe93）
+    ⇒ 两个候选的 import_export.py 不一样
+```
+
+## 硬证据
+
+```
+diff -q 两个候选的 import_export.py ⇒ Files … differ
+wc -l ⇒ L14WT 候选 265 行 ｜ L15 候选 252 行   ← 差 13 行
+
+L15 候选的真实代码（inspect.getsource）：
+    rows = self.store.rows(*queries[export_type])
+    if not rows: return ""                                  # 所有类型空结果都返回空串
+    writer = csv.DictWriter(output, fieldnames=list(rows[0]))
+# reports.py:176~180
+    if not rows: return ""                                  # 同样
+⇒ L15 起点上没有任何硬编码列名；四条全都走 rows[0]；空结果 ⇒ return "" ⇒ 0 字节
+```
+
+## 更正后的题目
+
+| 位置 | L15 起点的真实状态 |
+|---|---|
+| import_export.export_csv | 四类全部：空 ⇒ return ""（0 字节）；有数据 ⇒ rows[0] 的键当列名 |
+| reports.to_csv | 空 ⇒ return ""；有数据 ⇒ rows[0] |
+
+⇒ 本讲要做的比我原先写的更朴素也更彻底：给每一类导出在空结果时按已确认的字段规格写出表头
+  ⇒ 而「规格」要我从 queries 的 SELECT 列里取出来然后固定下来
+    ⇒ 这正是辅导资料说的「按明确的字段规格写列名，不再依赖第一条记录」
+
+## 我的测试本来是对的
+
+```
+--case empty_export_keeps_header ⇒ 退出码 1
+  [BLOCK] empty_export_keeps_header 30 ms  AssertionError: inventory 的合法空结果丢失了文件结构
+⇒ 这不是测试写错，而是它忠实反映了起点状态：inventory 确实没修
+```
+
+## 方法教训（第十二次同族）
+
+```
+⚠️ 错法：从一个候选/一个端口取来的观察，当成另一个候选的状态
+⇒ 诱因：两个候选的目录名很像，都为同一门课服务，我脑子里把它们当成「同一个产品」
+  ⇒ 而它们真的不同（差 13 行，而 13 行正是那个修复）
+⇒ 规则：
+   ① 每次引用「当前候选的代码」时，用那个候选目录的绝对路径重新读一次
+   ② 不从别的候选的观察里推断本候选的状态
+   ③ 两个候选要对比时，显式 diff，不靠记忆
+⇒ 证据强度排序：读记忆 < 读某个候选的代码 < 在当前候选里执行并打印
+```
+
+## 待办
+
+```
+[ ] ⭐ 更新 03-probe.md 的结论（标明那段是 L14WT 候选的观察）
+[ ] ⭐ 更新 06-spec-A.md 的来源与约束（四类全空，不是「只有 suppliers」）
+[ ] ⭐ 重做冻结提交（加 empty_export_keeps_header）
+[ ] ⭐ 重跑 course-submit（--eval-case empty_export_keeps_header）
+[ ] §6 核对产品结果 ｜ §7~§10 ｜ 🚩 待本人三件
 ```
