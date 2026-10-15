@@ -4889,3 +4889,91 @@ version：1 → 9 → 12 → 13
 [ ] ④ SUBMISSION.md（Skill 三分法、四组材料）
 [ ] 🚩 待本人定七件（第 0 件：两个最小入口落哪一侧）
 ```
+
+---
+
+# 🎉 L13：已完成任务跨真重启仍读到 completed（第 3 组材料拿到了）
+
+## 那道门的完整形态（本讲最硬的一条规则）
+
+```python
+if to_status == "completed":
+    if not reviewer or decision != "approve":
+        raise ValueError("完成交付必须由具名审核人明确 approve")
+    result = json.loads(row["result_json"]) if row["result_json"] else {}
+    summary = result.get("summary", {}) if isinstance(result, dict) else {}
+    if summary.get("decision") != "pass" or int(summary.get("blocking_failed", 0)) != 0:
+        raise ValueError("阻断级 Eval 未通过，不能批准完成")
+```
+
+⇒ 两个条件缺一不可：① 具名审核人且决定是 approve；② result_json 里已经存着
+  decision == "pass" 且 blocking_failed == 0
+⇒ 它读的是已经存下的 result_json，不是本次传进来的
+  ⇒ 所以必须在「evaluating → review」那一步就把通过的结果存进去
+    ⇒ 这解释了前面两次失败
+
+## VALID_TRANSITIONS（照抄）
+
+```
+queued → {spec_ready, failed, dead_letter}
+spec_ready → {executing, failed, dead_letter}
+executing → {evaluating, rework, failed, dead_letter}
+evaluating → {review, rework, failed, dead_letter}
+review → {completed, rework, failed, dead_letter}
+rework → {executing, failed, dead_letter}
+completed / dead_letter → 终态
+failed → {dead_letter}
+```
+
+## 实测：新任务 TASK-06246CE76D 一路走对
+
+```
+queued → spec_ready(v2) → executing(v3) → evaluating(v4) → review(v5，同步带上通过的 result)
+       → completed(v6，带 reviewer=LinZhou、review_decision=approve)
+⭐ 最终 status=completed、reviewed_by=LinZhou、decision=approve、version=6
+```
+
+## 真重启后（第 6 个进程，走 HTTP）
+
+```
+新进程 PID6 = 703963，端口 46073（前五个：702911/703013/703488/703601/703963）
+GET /api/v1/tasks/TASK-06246CE76D ⇒ HTTP 200
+   status="completed"、reviewed_by="LinZhou"、review_decision="approve"、
+   reviewed_at="2026-10-15 19:50:35"、version=6
+重启前 vs 重启后逐项相同：id / status / reviewed_by / review_decision / version —— 五项全同
+⇒ ⭐ version 这次没变（6 → 6），因为任务是 completed、没有可恢复的中间态
+  ⇒ 这补上了上一轮的推断：version 的 +1 来自「恢复正在执行的任务」，已完成的不会
+    ⇒ 它是「状态迁移 + 恢复重放」的计数，不是业务版本号
+```
+
+## 视图在两种状态下的说法不同
+
+```
+completed ⇒ human_decision_recorded=True
+            next_action={"action":"none","label":"已完成","reason":"任务已完成且审核字段可查"}
+review    ⇒ human_decision_recorded=False
+            next_action={"action":"human_review","label":"等待具名审核",
+                         "reason":"检查已完成，但还没有人作出决定"}
+⇒ 只有真有人批准过才说「已完成」；没有替人署名，也没把「没人决定」说成「已完成」
+```
+
+## 本讲完成标志的四组材料
+
+```
+① 首次判断 + 参考实验中改变判断的真实结果 ⇒ ✅ 01-reading-and-prediction.md（五条预判）
+   + 02-reference-lab.md（「我以为 reopened_store 算重启，实际不算」）
+② 个人任务、Spec、候选、修改与接口复验 ⇒ ✅ 06-spec/、07-submit-key.md、13-410-root-cause.md、
+   15-eval-case.md（21/21）、14-real-http.md（八条）
+③ 已完成任务的真实重启证据 + 采购/库存/流水和人的决定 ⇒ ✅ 本节（六进程、completed 存活）
+   + 16-reconcile.md（10/2/8 → 17/2/15、一条 +7）；⚠️「人的决定」待本人
+④ 同伴反馈、修订与下一事项的采用和验证 ⇒ ⚠️ 同伴：无；迁移：待做 ⇒ 如实标未完成
+```
+
+## 待办
+
+```
+[ ] ① §6 迁移到「库存查询」新 Task，记录经验来源/流程版本/适用理由/新任务验证结果
+[ ] ② §6 同伴复验 ⇒ 无真实同伴 ⇒ 如实标「仅自查，待同伴」
+[ ] ③ SUBMISSION.md（Skill 三分法、四组材料）
+[ ] 🚩 待本人定七件（第 0 件：两个最小入口落哪一侧）
+```
