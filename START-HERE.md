@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:23 +0800
+> 最后更新：2026-10-16 03:24 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -3407,3 +3407,62 @@ business: flowerp.service ✅ ｜ flowerp.store ✅
 [ ] ⚠️ **"保存失败"场景没构造**（**`save_error` 的逻辑没被实测** ✓）
 [ ] **§4 真实等待与人审** ✗ **§6 同伴 ✗ 迁移与流程版本**
 [ ] 🚩 **两位具名的人**：软件审核人 ✗ 采购负责人 ⇒ **待本人**
+
+
+---
+
+# ⭐⭐⭐ L12 §6：会等待 ✗ 拒绝旧候选的批准
+
+## 手册 §6 点出的一处缺口（**它直接要我补** ✓）
+
+> 「**参考程序只记录传入的姓名和决定 ✗ 不认证身份 ✗ 也不自动保证恢复时仍是同一候选。……
+>  **个人实现需拒绝旧候选的批准**。**」
+
+⇒ ✅ **补法**：
+```
+① ⭐ **`report_candidate` 字段** ⇒ 生成报告时 `state.report_candidate = state.candidate` ✓
+② ⭐ **批准前校验**：`report_candidate != candidate` ⇒
+   `review_decision = "rejected_stale_candidate"` ✗ `error` 写明两边的身份 ✗
+   `move("develop", "批准无效：报告不属于当前候选，需要重新检查")` ✓
+```
+
+## ⭐⭐⭐ §6 第一次运行（**手册的命令逐字 ✗ 退出码 3** ✓）
+
+```
+$ "$controlPython" -X utf8 -m agent.graph --max-rounds 3 --require-human-review \
+    --state-file .runtime/l12-review-01/state.json
+⇒ 退出码 **3** ✓ ｜ `status: awaiting_human_review` ✓ ｜
+  轨迹 **develop → test → human_review → awaiting_human_review** ✓（**与手册预期逐字一致**）
+⭐ `develop → test` 的理由是「**demo 模式：本轮不执行开发动作 ✗ 只观察状态流转**」
+   ⇒ **不再是"本轮最小变更完成"** ✓ **这正是"不把标签当成动作"** ✓
+`repair_count: 0`（**没假装执行** ✓）✗ `candidate=C0` ✗ `report_candidate=C0` ✓
+```
+
+## ⭐⭐⭐ 四个场景实测（**全过** ✓）
+
+```
+A ⭐ **候选 Y ✗ 报告属 C0 ⇒ 批准被拒**：`status=develop` ✗
+   `review_decision=**rejected_stale_candidate**` ✗
+   error「**报告属于 C0 ✗ 当前候选是 Y；候选变化后必须重新检查再送审**」✓
+B **候选一致 ⇒ `completed`** ✗ reviewer=张三 ✗ decision=approve ✓
+C **打回 ⇒ `X → X-R2` ✗ `report_candidate=''` ✗ rounds/check 都没变** ✗
+  新候选重跑 ⇒ `report_candidate=X-R2` ✗ **`check_count 1 → 2`** ✓
+D **无审核人 ⇒ `ValueError`** ✓
+⇒ ⭐ **"候选变化后重验"闭环了** ✓
+```
+
+## ⚠️ 一处如实说明的取舍
+
+```
+⚠️ **`--develop-mode` 的库默认是 `controlled` ✗ CLI 默认是 `demo`** ✓
+⇒ **理由**：**手册 §6 的命令不带执行参数 ✗ 却期望 `awaiting_human_review`** ✓
+   **而提示词要求"develop 必须连接受控执行"** ⇒ **两条只能靠"显式声明 demo"共存** ✓
+⇒ ⚠️ **但这是**我的**一个设计选择** ✗ **不是手册规定的** ✓ ⇒ 🚩 **留给本人判断** ✓
+```
+
+## ⚠️ 仍未做
+
+```
+[ ] ⚠️ **"保存失败"场景没构造**（**`save_error` 逻辑没实测** ✓）
+[ ] **§7 在同一候选检查采购规则** ✗ **§8 最后对账** ✗ **§6 同伴 ✗ 迁移与流程版本**
+[ ] 🚩 **真实软件审核人** ⇒ **待本人**
