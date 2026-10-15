@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:33 +0800
+> 最后更新：2026-10-16 04:34 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -7611,4 +7611,81 @@ tools/codex-substitute.py（322 行）有 l05/l07/l09/l10 分支，按工作区�
 [ ] ⭐ 扩平替件加 exec 子命令，或新写一个更聚焦的
 [ ] ⭐ 设 FLOWERP_CODEX_COMMAND，重跑 course-submit
 [ ] §6 核对产品结果 ⇒ §7~§10 ｜ 🚩 待本人
+```
+
+---
+
+# ⭐⭐⭐⭐⭐ L15：codex exec 协议全文（平替件的契约）
+
+## 平替挂在哪（codex_command.py，全文 22 行）
+
+```python
+explicit = executable or os.getenv('FLOWERP_CODEX_COMMAND')
+command = explicit or 'codex'
+resolved = shutil.which(command)
+if resolved: return resolved
+if explicit or os.name != 'nt': return command
+⇒ 只要 FLOWERP_CODEX_COMMAND=<绝对路径>，which 就会找到它
+```
+
+## 它怎么调（execution.py:219~223 原文）
+
+```python
+command = [self.executable, "exec", *headless_options(), "--json", "--sandbox",
+           "workspace-write", "--ephemeral", "--output-schema", str(schema_path),
+           "--output-last-message", str(result_path), "--cd", str(self.workspace_root), "-"]
+:224 prompt 走 stdin（末尾的 -）
+headless_options() 在本机返回 []（没有 CODEX_HOME/config.toml）
+```
+
+## stdin 的 prompt
+
+```python
+{"task_id","request","requirement_id","business_refs","spec","write_scope"}  # 结构化 JSON
+```
+
+## 要写出的 final.json（_output_schema）
+
+```python
+{"summary": str, "tests": [str], "risks": [str], "next_step": str}
+required 四个全要；additionalProperties: False ⇒ 一个不能多
+_load_final 读它；不是 dict 就包成 {"raw": …}；JSON 坏了就 {"parse_error": …}
+```
+
+## 通过的五个条件
+
+```python
+success = returncode == 0 and not timed_out and not launch_error
+          and not out_of_scope and not inspection_error
+```
+
+## 完整契约
+
+```
+argv   = exec --json --sandbox workspace-write --ephemeral
+         --output-schema <p> --output-last-message <q> --cd <ws> -
+stdin  = JSON prompt
+要做   = 只改 write_scope 列的文件（flowerp/import_export.py、flowerp/reports.py）
+         目标：让合法空结果仍输出已确认字段规格的表头
+写出   = <q> 恰四个字段
+stdout = JSON 事件流；退出码 0
+```
+
+## 与我 L04 那个平替件的差别
+
+```
+tools/codex-substitute.py（322 行）有 apply_l05/l07/l09/l10，接口是「给我一个 workspace」
+它没有 exec 子命令、不读 stdin、不写 final.json
+⇒ 要加一层 CLI 适配：解析 exec 与 flag、读 stdin、从 write_scope 决定做什么、写 final.json
+  ⇒ 这正是「平替 codex」的落点
+```
+
+## 待办
+
+```
+[ ] ⭐ 写 tools/l15-codex-exec.py 或给 codex-substitute.py 加 exec 子命令
+    ⇒ 要真的改对 flowerp/import_export.py 与 flowerp/reports.py
+[ ] ⭐ 设 FLOWERP_CODEX_COMMAND，重跑 course-submit，看差分判定变 True
+[ ] §6 核对产品结果（真 HTTP、空库、四条导出都该有表头）
+[ ] §7~§10 ｜ 🚩 待本人
 ```
