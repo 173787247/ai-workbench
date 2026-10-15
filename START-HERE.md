@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:21 +0800
+> 最后更新：2026-10-16 03:23 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -3344,3 +3344,66 @@ business: flowerp.service ✅ ｜ flowerp.store ✅
     但直接调它的路径没有**）⇒ **记录** ✓
 [ ] §4 真实等待与人审 ｜ §5 Graph 部分 ｜ §6 同伴/迁移/流程版本
 ```
+
+
+---
+
+# ⭐⭐⭐ L12 Graph 改完：四处缺口 ✗ 一处我自己发现的额外问题
+
+## 改了五件事（`agent/graph.py` **123 → 254 行**）
+
+```
+① ⭐⭐ **`develop` 必须连接受控执行** ⇒ 没有 `executor` 就 `stopped` ✗
+   理由：「**develop 没有受控执行入口 ✗ 不把标签当成动作**」✓
+   有执行时转移理由带 `task_id=… ✗ returncode=… ✗ changed_files=…`（`_digest` 压缩 ✓）
+② ⭐⭐ **打回形成新候选**：`candidate += "-R{round+1}"` ✗ `report=None` ✗ `repair_task=None` ✓
+③ ⭐ **三类异常分开**：`read_error` / `run_error` / `save_error` ✓
+④ ⭐ **`_save_state` 移出主循环的 try ✗ 自己的失败**返回**给调用方** ✓
+⑤ ⭐ **边白名单 `_EDGES`** ⇒ `move` 只走表里的边 ✗ 走不了 `ValueError` ✓
+   ⇒ **`develop → completed` 不在表里 ⇒ 跳不过检查和人审** ✓
+```
+
+## ⭐⭐ 实测（**八项** ✓）
+
+```
+① 无 executor  ⇒ ✅ **`stopped`** ✗ 「develop 没有受控执行入口 ✗ 不把标签当成动作」
+① 有 executor  ⇒ ✅ `awaiting_human_review` ✗ check=1 ✗ repair=1 ✗ 三条边理由都带真实内容
+② 打回         ⇒ ✅ `X → X-R2` ✗ ⭐ **`report=None`** ✗ ⭐ **rounds/check 都没变**（**没顺手再跑一轮**）
+② 新候选重跑   ⇒ ✅ ⭐ **`check_count 1 → 2`**（**重新检查了**）
+② 具名批准     ⇒ ✅ **`completed`** ✗ reviewer=张三 ✗ decision=approve
+③ 读异常       ⇒ ✅ **`read_error=JSONDecodeError`** ✗ 没往下走 ✗ 文件没被覆盖
+③ 执行异常     ⇒ ✅ **`run_error=RuntimeError: 执行器崩了`** ✗ `failed`
+⑤ 边受限       ⇒ ✅ **`ValueError`**：「不允许的边：develop → completed」
+⚠️ ④ 保存失败   ⇒ **我没构造那个场景** ⇒ 如实记
+```
+
+## ⚠️⚠️ 一处**我自己发现**的额外问题（**不是测试错 ✗ 是代码错**）
+
+```
+⚠️ 第一版改完后，第 2 次（打回）的返回里 `rounds=2` ✗ `check_count=2` ✗ `report` 不是 None ✓
+⇒ ⭐ 我以为"旧报告没清" ✗ **查下去问题更大**：
+   **打回把状态改成 `develop` 后 ✗ `while` 继续跑 ⇒ 它立刻又跑了一整轮** ✓
+⇒ ⭐⭐⭐ **辅导资料**：「**等待时没有新的人工决定 ✗ 就保存状态并结束本次执行 ✗
+   而不是不断调用 Codex。**」✗ **"打回"也是人已经作了决定** ✓
+⇒ ✅ **修**：`rejected_this_call` ⇒ `while … and not rejected_this_call` ✓
+⇒ ⭐ **修完**：`rounds 1→1` ✗ `check 1→1` ✗ `report=None` ✗ `candidate X→X-R2` ✗
+  **第 3 次才 `check 1→2`** ✓
+```
+
+## ⚠️ CLI 行为变了（**如实说明** ✓）
+
+```
+改后 `python -X utf8 -m agent.graph --max-rounds 3` ⇒ 退出码 **2** ✗ `status=stopped`
+⇒ ⭐ **CLI 不提供 executor** ✗ 新逻辑下 develop 没有入口就停 ✓
+⇒ ⭐ **诚实**（**没有执行入口就不假装改了**）✗ ⚠️ **但 CLI 少了一条可走通的路** ✓
+⇒ ⚠️ **手册 §6 要验"会等待 ✗ 也会继续"** ⇒ **待办** ✓
+```
+
+## 待办
+
+```
+[ ] ⚠️ **CLI 要能提供执行入口**（**但"执行入口"必须是真受控执行 ✗ 不能塞假的** ✓）
+    ⇒ ⭐ **本轮 `write_scope` 不含 `workbench/`** ⇒ **不能接工作台任务入口** ✓
+[ ] ⚠️ **"保存失败"场景没构造**（**`save_error` 的逻辑没被实测** ✓）
+[ ] **§4 真实等待与人审** ✗ **§6 同伴 ✗ 迁移与流程版本**
+[ ] 🚩 **两位具名的人**：软件审核人 ✗ 采购负责人 ⇒ **待本人**
