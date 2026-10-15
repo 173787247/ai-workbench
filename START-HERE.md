@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:04 +0800
+> 最后更新：2026-10-16 03:05 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -2455,3 +2455,69 @@ duplicate-id    退出 **0**  ✅ "**IntegrityError**; five tables unchanged"  �
 [ ] §5 真实并行 ⇒ ⭐ **用 `subagent` 平替 Codex 原生 Subagents**
 [ ] §6 主 Agent 串行整合与复验 ｜ §7 复盘与 Skill 迁移
 ```
+
+
+---
+
+# ⭐⭐ L11 §4.1 「局部绿 ✗ 完整红 ✗ 修复后同版绿」
+
+## 三次检查（**手册预期 0 / 1 / 0 ✗ 逐字对上** ✓）
+
+```
+01-partial-v1    退出 **0** ✗ service `a941f9e79aa6b03c…`
+02-complete-v1   退出 **1** ✗ service ⭐ **`a941f9e79aa6b03c…`（同一个）**
+03-integrated-v2 退出 **0** ✗ service ⭐ **`0663356df47c8026…`（变了）** ✗ 七项全过
+⇒ ⭐⭐⭐ **同一份代码 ✗ 两份互不矛盾的报告**（**前两次哈希相同 ✗ 一次 0 一次 1** ✓）
+   ⇒ ⭐ **手册**：「**两份报告可以同时成立 ✗ 不能把风险发现直接解释为"测试子代理出错"。**」✓
+```
+
+## ⭐⭐⭐ 手册让我回答的："哪一条新增动作使尚未到货商品进入库存"
+
+```
+`02-complete-v1/states/normal.json`：
+  before **10 / 2 / 8**（**手写预期**）⇒ after **17 / 2 / 15** ⇒ **在库 +7 ✗ 可用 +7**
+⭐ 肇事流水：`key = **teaching-premature-PR-TARGET**` ✗ `quantity = **+7**` ✗
+   `event_type = **receive**` ✗ reference=manual ✓
+⇒ ⭐⭐ **而 `restored.diff` 只有一处 `-` 行**：
+   `-        self.receive_stock(sku, quantity, "teaching-premature-" + pid)`
+   ⇒ ⭐ **注入的就是"保存申请后顺手入库"✗ 修复就是删掉它** ✓
+   ⇒ ⭐ **`event_key` 里的 `teaching-premature-` 正是诊断** ✓
+```
+
+## ⭐⭐ 五种拒绝后的五表快照
+
+```
+blank-reason / duplicate-id / negative / unknown-sku / zero ⇒ before==after 全 **True** ✓
+⭐ normal ⇒ **False** ← ✅ **正确：它确实新增了一条申请** ✓
+```
+
+## ⭐⭐⭐ 一处极强的交叉验证
+
+```
+`03-integrated-v2` 的 `service_sha256` = **`0663356df47c8026b40b7c36…`**
+⇒ ⭐⭐⭐ **与我 L10 收敛候选上修完 `ship_order` 得到的 `0663356df47c8026` 完全相同**
+   ⇒ **L10 我经工作台改的 ✗ L11 课程 lab 注入的 ✗ 到达同一份服务** ✓
+```
+
+## ⚠️ `boundary`（**照抄** ✓）
+
+> 「**Sequential real-code verification experiment; not native delegation, model repair,
+>  efficiency measurement, or human acceptance.**」
+
+⇒ ⭐ **四样都不是** ⇒ ⭐ **手册**：「**不要把顺序复验截图写成真实子代理并行。**」✓
+   ⇒ **真正的并行在 §5 ✗ 要我自己做** ✓
+
+## ⚠️ 我读错一处键
+
+```
+⚠️ 想从 `process.json` 取 `results` 逐条列七项检查 ⇒ **拿到空 `summary`** ✓
+⇒ ⭐ **同 §2 的教训：先看键名再取值** ✗ **我又按印象取了** ✓
+⇒ **七项只有汇总（`total 7 / passed 7`）✗ 逐条名单这次没取到** ⇒ **如实记** ✓
+```
+
+## 下一步
+
+```
+[ ] **§4.2 工作台建本人交付任务** ✗ **§4.3 两份子任务合同（读写集 ✗ `input_version`）**
+[ ] **§5 真实并行** ⇒ ⭐ **`subagent` 平替 Codex 原生 Subagents** ✓
+[ ] **§6 整合复验** ✗ **§7 复盘与 Skill 迁移**
