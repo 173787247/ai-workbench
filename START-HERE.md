@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:37 +0800
+> 最后更新：2026-10-16 04:38 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -7887,4 +7887,73 @@ not_when「与有效空表合同冲突」
 [ ] ⭐ 跑 memory_rag_lab.py --evaluate，留原始输出与退出码
 [ ] ⭐ §8 换一个事项查询 ⇒ §9 用上下文但不替人采用 ⇒ §10 回收效果
 [ ] 🚩 待本人：reviewed_by 的真实姓名（脚本不认证，我不代签）
+```
+
+---
+
+# ⭐⭐⭐⭐⭐ L15 §7 记忆集与 lab 实测：治理性质被证实，evaluate fail 的原因正是「没人审核」
+
+## 我写了什么
+
+| memory_id | status | title |
+|---|---|---|
+| MEM-L15-EXPORT-EMPTY-001 | ⭐ candidate | 合法空结果必须保留已确认的字段规格 |
+| MEM-L15-EXPORT-REVOKED-000 | ⭐ revoked | 空库存导出应该直接报错（反例） |
+| MEM-L15-MEMORY-GOVERNANCE-001 | ⭐ candidate | 未审核的反馈不能改写阻断裁判 |
+
+三条的 source.task_id 都是 TASK-AD82BFE14C（手册第②项要求）
+reviewed_by 留空 —— 脚本不认证审核者，我不代签，所以没有一条冒称 active
+
+evidence_refs 都是我打开过的：03-probe/empty-db-probe.log、03-probe/verdict.json、
+18-product-result/empty-export.log、09-check-frozen/after-add.json、06-spec-A.md
+
+## 实测①：默认检索只收 active
+
+```
+--query "库存 CSV 导出没有数据时怎样区分有效空表和失败" --top-k 3 ⇒ 退出码 0
+filters: {project: FlowERP, status: active}    ← 只有 active
+retrieved: []                                   ← 我那条 candidate 没进来
+generation_contract.rule: 关键建议引用 memory_ref；没有支持时明确写未找到可用记忆；采用由人决定
+snapshot_sha256: ec3797cf…
+⇒ 这就是 acceptance 第③条的机器证据：未审核不进默认上下文；采用由人决定；检索有快照指纹
+```
+
+## 实测②：撤回的默认排除
+
+```
+--query "空库存导出应该直接报错吗" ⇒ retrieved: []，status 过滤是 active
+加 --include-revoked ⇒ filters.status = all，出现两条：
+   MEM-L15-EXPORT-REVOKED-000@v1（revoked，score 0.9091）
+   MEM-L15-EXPORT-EMPTY-001@v1（candidate，score 0.1818）
+diagnostic.warning: 反例开关允许撤回条目进入候选，只用于观察治理缺失
+```
+
+## 实测③：--evaluate fail，原因正是「没人审核」
+
+```
+--evaluate --top-k 3 ⇒ 退出码 1，decision: fail
+Q1/Q2/Q3 passed: true；Q4 passed: false（returned: []，relevant: [MEM-L15-MEMORY-GOVERNANCE-001]）
+boundary: 只证明固定教学语料与查询集下的检索合同，不证明生产 RAG 或答案事实正确
+⇒ 根因：两条记忆都是 candidate，status=active 的过滤把它们全排除
+  ⇒ Q1/Q2 仍 passed 是因为 no_answer_ok 为真；只有 Q4 因有 relevant 却检索不到而 fail
+    ⇒ 这正是「先保存为 candidate，责任人检查后写入真实姓名与时间，再改为 active」
+      ⇒ 改成 active 这一步只能由本人做，我不代签
+```
+
+## 一处如实说明
+
+```
+⚠️ --evaluate fail 不是 fixture 写错，而是正确反映了「还没人审核」
+   ⇒ 如果我把两条改成 active 让它变绿，那就是冒充实名审核
+     ⇒ 所以我保持 candidate，并把 fail 的原始输出留证
+```
+
+## 待办
+
+```
+[ ] ⭐ 读 §8~§10 细则
+[ ] ⭐ 事项 B：换一个业务对象真查询（§8 说换一个事项，B 要有自己的 Spec、检查候选与基线）
+[ ] §10 回收效果、完成跨事项证据
+[ ] 🚩 待本人：reviewed_by 真实姓名与时间、真实 L14 Task ID、Spec 的「本人确认版」、
+    --actor 真实姓名、TASK-AD82BFE14C 的具名审核
 ```
