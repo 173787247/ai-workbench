@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:32 +0800
+> 最后更新：2026-10-16 04:33 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -7473,4 +7473,67 @@ memory.py 属于「补齐既有合同」⇒ 它必须已经在候选里
 [ ] ⭐ 重新冻结检查（含两条检查，memory.py 不进冻结）
 [ ] 🚩 先想清：memory.py 该在冻结提交里还是由任务执行实现
 [ ] 🚩 待本人 ｜ §6~§10
+```
+
+---
+
+# 🎉 L15 矛盾解开：memory.py 要进冻结提交
+
+## 机制原文（workbench/course_workspace.py）
+
+```python
+:198 def dynamic_start_evidence(report, static_cases, dynamic_cases) -> dict:
+:199     """A new requirement must fail its own checks while the existing contract passes."""
+:203     validate_report(report, static_cases + dynamic_cases, runner.get('process_returncode'))
+:208     failures = {item.get('name') for item in report.get('results', [])
+:209                 if isinstance(item, dict) and item.get('passed') is False}
+:210     static_failed = sorted(failures & set(static_cases))
+:211     dynamic_failed = sorted(failures & set(dynamic_cases))
+:212     return {'accepted': error is None and bool(dynamic_failed) and not static_failed, …}
+```
+
+⇒ static_cases = 合同的 eval_cases；dynamic_cases = --eval-case 给的
+
+## 那个「矛盾」是假矛盾
+
+```
+accepted 的两个条件：
+  · bool(dynamic_failed) ⇒ 本次新增用例必须真的红
+  · not static_failed    ⇒ 合同那两条必须全绿
+⇒ 而「合同那两条全绿」必须在冻结提交那一刻就成立
+  ⇒ 因为 course-submit 用冻结提交当基线建新 worktree
+    ⇒ 所以 workbench/memory.py 必须进冻结提交
+      ⇒ 它是「起点补齐」，不是「本次业务修复」
+```
+
+三个参数的正确填法：
+
+| 参数 | 值 | 理由 |
+|---|---|---|
+| 冻结提交内容 | 两条检查 + workbench/memory.py | memory.py 让静态合同在起点就绿 |
+| --allowed-file | flowerp/import_export.py、flowerp/reports.py | 本次业务修复；memory.py 不列 |
+| --eval-case | empty_export_keeps_header | 本次新增，唯一那个 |
+
+⇒ 这也解释了手册为什么说 --allowed-file「不含冻结检查」：
+   冻结提交装的是「起点状态」（检查 + 让既有合同成立的补齐），
+   而 --allowed-file 管的是「任务执行期间允许改什么」
+   ⇒ 两者是不同的东西，我先前把它们当成一回事了
+
+## 教训
+
+```
+⚠️ 我原先以为「memory.py 是实现，所以不该进冻结提交」
+⇒ 而机制说：冻结提交 = 任务开始前必须成立的状态
+   ⇒ 包含：本次新增的检查（起点红、防实现反向改检查）
+           + 让既有合同变绿的补齐（否则起点无效）
+   ⇒ 一句话：「冻结检查」这个名字只说了它的一半职能，它其实是「起点快照」
+```
+
+## 待办
+
+```
+[ ] ⭐ 重新冻结（eval/cases.py、eval/harness.py、workbench/memory.py）
+    ⇒ git diff --cached --name-only 复核三个文件、无报告/数据库/凭据
+[ ] ⭐ 重跑 course-submit（--eval-case empty_export_keeps_header；--allowed-file 只两个业务文件）
+[ ] §6 核对产品结果 ⇒ §7~§10 ｜ 🚩 待本人
 ```
