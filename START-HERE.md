@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:26 +0800
+> 最后更新：2026-10-16 04:28 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -7177,4 +7177,72 @@ python -X utf8 -m workbench.cli course-submit --lesson 15 --execute-code
 [ ] §6 核对产品结果与摘要（在它新建的候选里、真 HTTP、空库）
 [ ] §7~§10：Memory 登记、换事项查询、不替人采用、回收效果
 [ ] 🚩 待本人：真实 L14 Task ID、Spec 的「本人确认版」、--actor 的真实姓名
+```
+
+---
+
+# 🚨🚨🚨 L15 两个重大发现：用例名写错了，用例身份也搞错了
+
+## 发现一：名字少一个 come（18 处）
+
+| 来源 | 名字 |
+|---|---|
+| ⭐ 合同 eval_cases（权威） | raw_feedback_cannot_become_blocking |
+| 大纲 | raw_feedback_cannot_become_blocking |
+| ⚠️ 我写的 Spec | raw_feedback_cannot_be_blocking（18 处） |
+| ⚠️ 我注册的 harness/cases | raw_feedback_cannot_be_blocking |
+| ⚠️ 我传给 course-submit 的 | raw_feedback_cannot_be_blocking |
+| ⭐ 手册原始出处（:226/:290/:308/:421） | ⭐ raw_feedback_cannot_become_blocking |
+
+⇒ 正确名有 come，我从头到尾少了一个 come
+  ⇒ 而且从「合同投影」那一步就丢了，之后 18 次都在复制我自己的错，没回到权威源
+    ⇒ 这是 AGENTS.md 第一条的同族：引用链上没有回到权威源
+      ⇒ 而 course-submit 当场抓住了它，因为它拿合同的权威名去跑 Eval
+
+修法：git reset --soft 撤掉冻结提交（改动还在）；改名；用权威名重跑两条；
+     新的冻结提交 53d3e65d94abf3ccd86de37c23f1f113d6a40341；权威名写回 7 个记录共 18 处
+
+## 发现二：它已经是静态合同 Eval，不能用 --eval-case 声明
+
+```
+course-submit … --eval-case raw_feedback_cannot_become_blocking …
+⇒ 退出码 2：cli.py: error: 动态 Eval 必须是本次需求新增用例，
+   不能重复静态合同 Eval：raw_feedback_cannot_become_blocking
+```
+
+| | 是什么 | 该怎么处理 |
+|---|---|---|
+| raw_feedback_cannot_become_blocking | 合同里的静态 Eval | 本该已存在于候选 ⇒ 要补上，但不进 --eval-case |
+| 我自己新造的用例 | 「本次需求新增」 | 这个才是 --eval-case |
+
+⇒ 本讲的真实形状：
+① 候选缺少一条合同静态 Eval ⇒ 真缺口。我写的用例内容对、名字也对，
+   但它的身份是「补上合同要求的静态 Eval」，不是「本次新增」⇒ 可进冻结提交，不能当 --eval-case
+② 我还要另造一个「空结果仍输出完整表头」（如 empty_export_keeps_header）
+   ⇒ 那个才是 --eval-case，而且它才是本讲真正的工程需求（修 suppliers、reports.to_csv）
+     而 raw_feedback_cannot_become_blocking 是治理侧的合同要求 ⇒ 两个都做，身份分清
+
+## 这一轮学到的方法
+
+```
+① 名字只能从权威源取，而且每次都要重新取
+   ⇒ 凡是要精确匹配的字符串（用例名、字段名、键名），写下来之前回到权威源 grep 一次
+② 「合同列的」与「我要新增的」是两种身份
+   ⇒ --eval-case 只收后者；前者要补进候选但不声明
+   ⇒ course-submit 的这条校验正是在防「把合同已要求的东西冒充成自己的新增」
+③ 报错信息是最好的老师：
+   第一次「未知 Eval：…become…」⇒ 发现名字错了
+   第二次「不能重复静态合同 Eval」⇒ 发现身份错了
+```
+
+## 待办
+
+```
+[ ] ⭐ 另造一个用例：empty_export_keeps_header（空结果、四条导出、reports.to_csv）
+    ⇒ 它要在起点红（suppliers 现在返回 0 字节 ⇒ 断言失败 ⇒ 红）
+[ ] ⭐ 重做冻结提交（含两个用例：补的静态 Eval + 我新造的）
+[ ] ⭐ 重跑 course-submit（--eval-case empty_export_keeps_header）
+[ ] §6 核对产品结果（它新建的 worktree、真 HTTP、空库）
+[ ] §7~§10
+[ ] 🚩 待本人：真实 L14 Task ID、Spec 的「本人确认版」、--actor 真实姓名
 ```
