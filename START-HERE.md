@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:33 +0800
+> 最后更新：2026-10-16 03:35 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -4022,3 +4022,89 @@ $ git diff HEAD --stat
 [ ] 写六段式 Spec ⇒ 实现两个端点 ⇒ §5 真实采购核对 ⇒ §6 同伴复验 ✗ 迁移
 [ ] 🚩 **事项编号 ✗ 工作台登记** ⇒ **待本人**
 ```
+
+
+---
+
+# ⭐⭐⭐ L13 架构调查：**四层查完 ✗ 缺的三样定位到**
+
+## ⭐⭐ HTTP 层在哪 —— **四步查出来的**
+
+```
+① 扫 `HTTPServer|BaseHTTPRequestHandler` ⇒ `platform_server.py` ✗ `server.py`
+② 扫 `do_POST|do_GET` **的定义** ⇒ **只有这两个**
+   ⚠️ **`platform_api.py` 有 `/api/` 字样 ✗ 但没有 `do_*`**
+   ⇒ ⭐ **第一眼最像的那个**不是**HTTP 层**
+③ `platform_api.py`：`class PlatformResponse`(:32) ✗ `class HarnessPlatformAPI`(:38)
+④ `platform_server.py:47-49`：`/api/v1/*` 全部 ⇒ `api.dispatch(...)`
+⇒ ⭐⭐⭐ **分层：`platform_server.py`（HTTP 层）⇒ `platform_api.py`（业务层 `dispatch` 路由表）**
+   ⇒ **"新增端点"**不用**碰 `platform_server.py`**
+```
+
+## ⭐⭐⭐ `platform_api.py` 的路由表形状（**照抄 ✗ 不发明**）
+
+```python
+def dispatch(self, method, raw_path, headers, body) -> PlatformResponse:
+    path, _, query_string = raw_path.partition("?")
+    path = path.rstrip("/") or "/"
+    ...
+    try:
+        if path == "/api/v1/health" and method == "GET":
+            return PlatformResponse(200, {...})
+        ...
+        return PlatformResponse(404, {"error": "not_found", "message": "Harness API 路径不存在"})
+    except KeyError as exc:            return PlatformResponse(404, {"error": "not_found", …})
+    except (TypeError, ValueError) as exc: return PlatformResponse(422, {"error": "invalid_request", …})
+⇒ ⭐ **现成出口 404 / 422** ✗ ⚠️ **没有 409** ⇒ **本讲要加**
+```
+
+## ⭐⭐⭐ 已有的持久化 `workbench/task_store.py`（287 行）
+
+```
+方法：`create` ✗ `get` ✗ `list` ✗ `append_event` ✗ ⭐ **`recover_automatic_tasks()`**
+      ✗ `transition` ✗ `review(task_id, reviewer, decision, note)`
+`tasks` 列：⭐ `requirement_id` ✗ ⭐ `business_refs_json` ✗ `spec_path` ✗
+  ⭐ `reviewed_by`/`review_decision`/`review_note`/`reviewed_at` ✗
+  ⭐ `automation_mode` ✗ ⭐ `execution_mode` ✗ ⭐ `write_scope_json` ✗ `version`
+`task_events` 列：`from_status` ✗ `to_status` ✗ `detail` ✗ `actor` ✗ `evidence_json` ✗ `created_at`
+⇒ ⭐⭐⭐ **辅导资料 §2 的"三种身份"表里全都有**：
+   `requirement_id`（为什么做）✗ `id`（哪一次）✗ `business_refs_json`（影响哪个对象）
+   ✗ `execution_mode`/`write_scope_json`（**最小权限**）✗ `version`+`task_events`（状态/事件分工）
+⭐ **`create()` 已经把"任务行 + 受理事件"放在同一个事务里**
+   ⇒ **正是辅导资料 §3 那句**
+```
+
+## ⚠️⚠️ 缺的三样（**首红扫描结论得到确认**）
+
+```
+① **没有"提交键"** ⇒ `create()` 每次 `uuid4()` ✗ **"同键找回"做不到 ✗ "409"更做不到**
+② **没有 `POST /api/v1/tasks`** 与 **`GET /api/v1/tasks/<id>`**（扫描 `status_url` ⇒ 没找到）
+③ **没有 `GET /api/v1/delivery/views/<id>`**（扫描 `delivery-view` ⇒ 没找到）
+⇒ ⭐⭐⭐ **正好对应合同 `acceptance` ①**：「**API 接受请求后返回 Task ID 而非伪称完成。**」
+```
+
+## ⭐ 8001 是什么
+
+```
+候选自己的 `README.md:220`：`python -X utf8 main.py --host 127.0.0.1 --port 8001`
+⇒ ⭐ **工作台首页 = 候选根目录 `main.py`**（**不是 `workbench.cli serve`（8000）**）
+```
+
+## ⭐ 实现方案（**先写 ✗ 再动手**）
+
+```
+① 复用 `TaskStore`（**不新建表 ✗ 不新建存储**）✗ 加"提交键"：
+   没出现过 ⇒ 新建 ✗ 记内容指纹 ｜ 同键同指纹 ⇒ **返回原任务**（`spec_count` 不变）
+   ｜ 同键异指纹 ⇒ ⭐ **抛 `Conflict`**
+② `dispatch` 加三条路由：`POST /api/v1/tasks`（**202**）✗
+   `GET /api/v1/tasks/<id>`（**200**）✗ `GET /api/v1/delivery/views/<id>`（**200**）
+③ 加 `409` 出口 ✗ ④ 指纹要含 `request`/`actor`/`business_refs`（**参考实验改这三样各得 409**）
+⑤ ⭐ **最小权限**：`POST` 只允许 `execution_mode == "verify"` ✗ **`codex` 要 400**
+```
+
+## 下一步
+
+```
+[ ] 写六段式 Spec ⇒ 实现 ⇒ **先红后绿 ✗ 同版本复验 ✗ 完整阻断回归**
+[ ] §5 真实采购核对 ✗ §6 同伴复验 ✗ 迁移
+[ ] 🚩 **事项编号 ✗ 工作台 8001 登记** ⇒ **待本人**
