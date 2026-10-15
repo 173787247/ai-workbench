@@ -1,0 +1,37 @@
+diff --git a/eval/cases.py b/eval/cases.py
+index 8a231a2..400a38c 100644
+--- a/eval/cases.py
++++ b/eval/cases.py
+@@ -468,6 +468,11 @@ def payable_aging_tracks_open_supplier_exposure():
+     from workbench.external_project import evaluate_case
+     return evaluate_case('payable_aging_tracks_open_supplier_exposure')
+ 
++def ar_aging_export_keeps_columns():
++    from workbench.external_project import evaluate_case
++    return evaluate_case('ar_aging_export_keeps_columns')
++
++
+ def double_entry_fifo_and_subledger_reconciliation():
+     from workbench.external_project import evaluate_case
+     return evaluate_case('double_entry_fifo_and_subledger_reconciliation')
+diff --git a/eval/harness.py b/eval/harness.py
+index f94f012..ffed1fa 100644
+--- a/eval/harness.py
++++ b/eval/harness.py
+@@ -10,7 +10,7 @@ from typing import Callable
+ 
+ from . import cases
+ 
+-PROJECT_CASES = frozenset({'illegal_transition_is_blocked', 'purchase_requires_approval', 'stale_stock_count_is_blocked', 'payable_aging_tracks_open_supplier_exposure', 'purchase_request_preserves_reason', 'production_schema_invariants', 'order_total_matches_lines', 'stock_never_negative', 'ecommerce_channel_order_is_idempotent_and_guarded', 'backup_is_restorable', 'bank_statement_control_and_reconciliation', 'channel_callback_lease_is_exclusive_and_bounded', 'multi_location_transfer_conserves_stock', 'inventory_export_is_stable', 'cancellation_releases_reservation', 'receiving_is_idempotent', 'double_entry_fifo_and_subledger_reconciliation', 'purchase_invoice_three_way_match', 'sales_credit_and_atomic_reservation'})
++PROJECT_CASES = frozenset({'illegal_transition_is_blocked', 'purchase_requires_approval', 'stale_stock_count_is_blocked', 'payable_aging_tracks_open_supplier_exposure', 'purchase_request_preserves_reason', 'production_schema_invariants', 'order_total_matches_lines', 'stock_never_negative', 'ecommerce_channel_order_is_idempotent_and_guarded', 'backup_is_restorable', 'bank_statement_control_and_reconciliation', 'channel_callback_lease_is_exclusive_and_bounded', 'multi_location_transfer_conserves_stock', 'inventory_export_is_stable', 'cancellation_releases_reservation', 'receiving_is_idempotent', 'double_entry_fifo_and_subledger_reconciliation', 'ar_aging_export_keeps_columns', 'purchase_invoice_three_way_match', 'sales_credit_and_atomic_reservation'})
+ 
+ 
+ @dataclass
+@@ -44,6 +44,7 @@ EVALS: list[tuple[str, str, Callable[[], str]]] = [
+     ("backup_is_restorable", "blocking", cases.backup_is_restorable),
+     ("purchase_invoice_three_way_match", "blocking", cases.purchase_invoice_three_way_match),
+     ("payable_aging_tracks_open_supplier_exposure", "blocking", cases.payable_aging_tracks_open_supplier_exposure),
++    ("ar_aging_export_keeps_columns", "blocking", cases.ar_aging_export_keeps_columns),
+     ("double_entry_fifo_and_subledger_reconciliation", "blocking", cases.double_entry_fifo_and_subledger_reconciliation),
+     ("bank_statement_control_and_reconciliation", "blocking", cases.bank_statement_control_and_reconciliation),
+     ("plugin_lifecycle_is_reversible", "blocking", cases.plugin_lifecycle_is_reversible),
