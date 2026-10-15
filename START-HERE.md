@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:43 +0800
+> 最后更新：2026-10-16 04:45 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -8432,4 +8432,75 @@ reorder_suggestions ⇒ product_id, sku, name, min_stock, max_stock, projected, 
 [ ] ⭐ course-submit（--session-baseline-ref = 6ae4813…）
 [ ] §10 四行证据表、feedback-evidence-review Skill
 [ ] 🚩 待本人：A 的具名审核、reviewed_by、采用决定的决定人、原反馈者复验
+```
+
+---
+
+# 🎉🎉🎉 L15 B 的受控执行也成功了
+
+```
+⭐ B 的成功任务 = TASK-E978708191，status = review（等待具名人工审核）
+⭐ B 的冻结提交 = 71d37dbf20346cd86d700db04b180404727fd8fd（第三版）
+差分判定十项全过：
+  baseline_was_red ✅｜candidate_is_green ✅｜candidate_changed ✅｜no_out_of_scope_writes ✅
+  real_code_execution ✅｜execution_succeeded ✅｜reports_are_valid ✅｜same_eval_cases ✅
+  same_isolated_workspace ✅｜distinct_eval_attempts ✅
+pre_summary  = {total:3, passed:2, blocking_failed:1, decision:block}
+post_summary = {total:3, passed:3, blocking_failed:0, decision:pass}
+accepted = True；changed_files = ['flowerp/reports.py']；out_of_scope_files = []
+```
+
+## 我改了三版检查
+
+| 版本 | 提交 | 问题 | 修法 |
+|---|---|---|---|
+| 第一版 | e511119 | 调裸的 to_csv(rows)，空 rows 没有形状，不可能通过 | 改成让每个报表提供自己的 CSV 出口 |
+| 第二版 | 5d7aacc | 调 exporter() 不传参数，TypeError | 按原报表的参数调用（含 since/until） |
+| ⭐ 第三版 | ⭐ 71d37db | 能红也能绿 | ✅ 冻结使用 |
+
+```
+⇒ 三版合起来正好是检查的设计过程：
+   第一版：我以为「to_csv 应该自己知道规格」，而那做不到（空结果没有形状）
+     ⇒ 所以改成「每个报表提供自己的出口」，那才是可实现的契约
+   第二版：接口对了，调用写错了
+   第三版：用改后的实现验它绿、用基线验它红 ⇒ 辨别力双向成立
+     [PASS] 46 ms（副本）｜ [BLOCK]（基线）
+```
+
+## 平替件的两个 bug（也是我改出来的）
+
+```
+⚠️ 第一次 B 的执行：changed_files: [] ⇒ 平替件什么都没做
+   ⇒ 根因：ACTIONS 只认 reports.py → _patch_reports，而它的守卫是
+     「to_csv 已带 fieldnames ⇒ 认为已修好 ⇒ 跳过」
+     ⇒ 因为 B 的基线已经含 A 的修复
+       ⇒ 加了 _patch_report_columns，并按基线状态自动选
+⚠️ 第二次 B 的执行：SyntaxError: invalid syntax @ line 190
+   ⇒ 根因：插入点用 text.find("\n    def ")，没算 @staticmethod 装饰器
+     ⇒ wrapper 插进了装饰器与函数之间
+     ⇒ 修法：re.search(r"\n    (?:@|def )", …)
+       并加出厂自检 ast.parse(text)，语法坏了就 SystemExit
+       ⇒ 这样它不可能再静默交坏代码出去
+```
+
+## 两个事项的对照
+
+| 对象 | A | B |
+|---|---|---|
+| Task | TASK-AD82BFE14C | TASK-E978708191 |
+| 状态 | review（等人审） | review（等人审） |
+| 新增 Eval | empty_export_keeps_header | empty_report_keeps_header |
+| 改动文件 | flowerp/import_export.py、flowerp/reports.py | flowerp/reports.py |
+| pre ⇒ post | 2/3 block ⇒ 3/3 pass | 2/3 block ⇒ 3/3 pass |
+| 冻结提交 | 9a4e9ee | 71d37db |
+| 基线 | 7321256 | 6ae4813（含 A 的未审核改动） |
+
+## 待办
+
+```
+[ ] ⭐ §10 四行证据表（来源与 A ｜ 个人经验 ｜ 查询与 B ｜ 实际效果）
+[ ] ⭐ examples/skills/feedback-evidence-review/SKILL.md（先自己预测一个反例）
+[ ] ⭐ 读 SUBMISSION.md 模板、写 L15 的 SUBMISSION.md
+[ ] 🚩 待本人：A 与 B 两个 Task 的具名审核、MEM-L15-EXPORT-EMPTY-001 改成 active、
+    采用决定的决定人与理由、§10 原反馈者复验
 ```

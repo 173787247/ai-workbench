@@ -113,10 +113,69 @@ def _patch_reports(workspace: Path) -> str:
     return "reports.py：to_csv 接受 fieldnames，空结果也能写出表头"
 
 
+#: 事项 B 的四个报表各自的列规格。取自各自 SELECT 的别名（或实测的行键），
+#: 互相不照搬，也不照搬库存导出的八列。
+REPORT_COLUMNS = {
+    "sales_summary": ["group_key", "group_name", "quantity", "amount_cents"],
+    "inventory_valuation": ["sku", "name", "site_code", "on_hand",
+                            "average_cost_cents", "value_cents", "open_layers"],
+    "inventory_aging": ["sku", "name", "lot_number", "expiry_date", "on_hand",
+                        "reserved", "available", "age_days", "days_to_expiry"],
+    "reorder_suggestions": ["product_id", "sku", "name", "min_stock", "max_stock",
+                            "projected", "suggested_quantity"],
+}
+
+
+def _patch_report_columns(workspace: Path) -> str:
+    """让四个报表方法把自己的列规格交给 to_csv，空结果也能写出表头。"""
+    target = workspace / "flowerp" / "reports.py"
+    text = target.read_text(encoding="utf-8")
+    if "REPORT_COLUMNS" in text:
+        return "reports.py 已经是 B 修复后的版本"
+    if "def to_csv(rows: list[dict], fieldnames" not in text:
+        raise SystemExit("reports.py 缺少 A 的 to_csv 签名，B 的基线不对")
+
+    text = text.replace("class ReportService", "REPORT_COLUMNS = " + repr(REPORT_COLUMNS)
+                        + "\n\n\nclass ReportService", 1)
+    replaced = 0
+    for name in REPORT_COLUMNS:
+        marker = f"    def {name}(self"
+        index = text.find(marker)
+        if index < 0:
+            continue
+        # 在方法体最后的 return 上包一层：把结果连同自己的规格交给 to_csv。
+        # 下一个类成员可能是 def，也可能是 @staticmethod 之类的装饰器，
+        # 只找 "\n    def " 会把包装插进装饰器和函数之间，产生语法错误。
+        match = re.search(r"\n    (?:@|def )", text[index + 1:])
+        end = (index + 1 + match.start()) if match else len(text)
+        body = text[index:end if end > 0 else len(text)]
+        patched = body.replace("return self.store.rows(", "return self.store.rows(", 1)
+        if "fieldnames=REPORT_COLUMNS" in body:
+            continue
+        # 在方法末尾追加一个包装：调用原逻辑后按自己的规格导出。
+        wrapper = (f'    def {name}_csv(self, *args, **kwargs) -> str:\n'
+                   f'        """本报表的空结果也要保留自己的列规格。"""\n'
+                   f'        return self.to_csv(self.{name}(*args, **kwargs),\n'
+                   f'                           fieldnames=REPORT_COLUMNS["{name}"])\n')
+        text = text[:end if end > 0 else len(text)] + wrapper + (text[end:] if end > 0 else "")
+        replaced += 1
+    if not replaced:
+        raise SystemExit("没有可包装的报表方法，结构可能与预期不符")
+    # 出厂前必须自检：语法坏掉的补丁不能交给外层工作台。
+    import ast
+    try:
+        ast.parse(text)
+    except SyntaxError as error:
+        raise SystemExit(f"补丁产生了语法错误，已放弃：{error}") from error
+    target.write_text(text, encoding="utf-8")
+    return f"reports.py：为 {replaced} 个报表方法加上各自规格的 CSV 出口"
+
+
 #: 允许的修复动作：相对文件 → 动作。只列 write_scope 里那些。
 ACTIONS = {
     "flowerp/import_export.py": _patch_import_export,
     "flowerp/reports.py": _patch_reports,
+    "flowerp/reports.py#columns": _patch_report_columns,
 }
 
 
@@ -181,6 +240,10 @@ def run_exec(workspace: Path, schema_path: Path | None, message_path: Path) -> i
     failed: list[str] = []
     for scope in scopes:
         action = ACTIONS.get(scope)
+        if action is _patch_reports and "def to_csv(rows: list[dict], fieldnames" in (
+                workspace / "flowerp" / "reports.py").read_text(encoding="utf-8"):
+            # 基线已含 A 的修复（to_csv 已接受 fieldnames）⇒ 本讲要补的是报表各自的规格。
+            action = _patch_report_columns
         if action is None:
             skipped.append(scope)
             _emit({"type": "item.skipped", "path": scope,
