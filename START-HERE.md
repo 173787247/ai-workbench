@@ -8168,3 +8168,62 @@ B 必须重写：报表的列名来自报表自己的定义，不能照搬库存
 [ ] §10 四行证据表、feedback-evidence-review Skill
 [ ] 🚩 待本人：把 MEM-L15-EXPORT-EMPTY-001 改成 active（填 reviewed_by）
 ```
+
+---
+
+# 🚨 L15 B 的基线问题：A 的修复卡在等具名审核
+
+## 先查：A 有没有可引用的 ref
+
+```
+① A 的 worktree：M flowerp/import_export.py、M flowerp/reports.py ⇒ 改动未提交
+   HEAD = 9a4e9eee29d4（还是冻结提交）⇒ A 的修复没有成为可引用的 commit
+② CLI：course-candidate-export（task_id）、course-candidate-promote、course-worktree-clean
+③ course_release.py:188~197
+   :190 if task.get("status") != "completed" or task.get("review_decision") != "approve":
+   :191     raise ValueError("只有具名审核通过并 completed 的课程任务可以导出候选")
+④ A 的当前状态：status=review、reviewed_by=None、review_decision=None
+⇒ 没有具名审核 ⇒ A 的候选导不出来 ⇒ 没有可引用的 ref
+```
+
+## 这对 B 是结构性影响
+
+```
+⚠️ B 的题目（四个报表方法各自声明列规格）依赖的是 to_csv 的新签名
+   ⇒ 而那个新签名正是 A 的修复
+     ⇒ 没有它，B 的题目根本不存在（A 之前 to_csv([]) 返回空串，不抛错）
+       ⇒ 所以 B 必须在含 A 修复的基线上做
+         ⇒ 而「含 A 修复」需要 A 的具名审核 ⇒ 待本人
+```
+
+## 但手册那句话不必读成「必须是不同的 commit」
+
+```
+⭐ 手册 §9：「重新输入 B 的 Spec、用例、检查候选与基线，不沿用 A 的值」
+⇒ 它说的是「重新输入」⇒ 可以理解为「再走一遍输入的流程」
+   而不是「基线必须与 A 不同」
+   ⇒ 同段还说「保存新 Task，并关联此次采用的 memory_ref、上下文路径和指纹」
+     ⇒ 重点是「新 Task、新 Spec、新用例」，而基线是事实条件
+```
+
+## 我的做法
+
+```
+① B 的 Spec 里写明：基线 = A 的受控执行结果（含 to_csv(rows, fieldnames=None) 与 EXPORT_COLUMNS）
+   并注明：A 的候选尚未具名审核 ⇒ 这一层待本人
+② B 自己的新增部分：四个报表方法各自声明列规格
+   ⇒ Spec、用例、检查候选、允许文件都不会沿用 A 的值
+③ B 的冻结提交：基于含 A 修复的工作区，而不是基于 9a4e9ee
+   ⇒ ⚠️ 但 --session-baseline-ref 需要一个 Git ref
+     ⇒ 要看清能不能给它一个工作区快照，或者必须先生成 commit
+       ⇒ ⚠️ 不能擅自在 A 的 worktree 里提交（那会改 A 的候选状态）
+```
+
+## 待办
+
+```
+[ ] ⭐ 查清 --session-baseline-ref 能不能指向「A 的 worktree 里的一个 commit」
+[ ] ⭐ 读 course_workspace.prepare 的 qualified_ref 参数
+[ ] 写 B 的六段需求（含「未找到可用记忆」，基线如实标注）
+[ ] 🚩 待本人：A 的具名审核（TASK-AD82BFE14C 的 approve）
+```
