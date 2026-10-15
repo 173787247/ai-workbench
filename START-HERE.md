@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:01 +0800
+> 最后更新：2026-10-16 04:02 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -5913,5 +5913,58 @@ state.purchaseStatus = "failed" ⇒ write() 被调用 1 次：完全相同的 PO
 [ ] 造「断网」后按三条判据观察（结果区、同步提示、业务动作）
 [ ] 读 5.3/5.4、第 1~3 步、第 4 步提示词、SUBMISSION 模板
 [ ] 写页面合同 ⇒ 实现 ⇒ 先红后绿 ⇒ 同版本复验 ⇒ 完整阻断回归
+[ ] 🚩 待本人定九件
+```
+
+---
+
+# 🎉 L14 完整链路证完：fetch 真的被调用（上一轮那个边界补上了）
+
+## 根因：我的沙箱缺 crypto
+
+```
+⚠️ 我直接调 api(...)（不经过 runAction 的 catch，让错误冒出来）：
+   ⇒ ReferenceError: crypto is not defined
+⇒ 原因：api() 的头部用 randomKey("request") 造请求 ID，而 randomKey 用的是浏览器的 crypto
+  ⇒ Node 的 vm 沙箱里没有 crypto，而我第一次没补
+    ⇒ 所以 api() 在 await fetch 之前就抛了，fetch 自然是 0 次
+⇒ 补法：crypto: { getRandomValues(a){ for(let i=0;i<a.length;i++) a[i]=Math.floor(Math.random()*256); return a; } }
+```
+
+⇒ 教训：上一轮我看到「fetch 0 次」，没有下「缺陷不成立」的结论，
+   而是标注「这是边界，下一步补」
+  ⇒ 这一次追下去，找到了真因（不是缺陷不存在，是我的沙箱不全）
+    ⇒ 如果上一轮我说「fetch 0 次 ⇒ 所以没发请求 ⇒ 缺陷不成立」，那就错了
+
+## 补桩后的实测（完整）
+
+```
+state.purchaseStatus = "idle"   ⇒ write() 1 次，fetch() 1 次：
+   POST /api/v1/purchases/orders/PUR-F41BB3510…/approve
+state.purchaseStatus = "failed" ⇒ write() 1 次，fetch() 1 次：完全相同的 POST …/approve
+⇒ 完整链路：state.purchaseStatus === "failed"（最新状态未知）⇒ 用户点「审批」
+   ⇒ runAction("purchase-approve", …) ⇒ write(…) ⇒ api(…) ⇒
+     fetch("POST", "/api/v1/purchases/orders/<id>/approve") 真的被调用
+⇒ 而 runAction 的 catch 把网络失败吞成一句 toast
+  ⇒ 所以用户看到的是：点了一下，弹了句错误，单据看起来还是待审批
+    ⇒ 而它其实可能已经被别人审过了
+      ⇒ 这正是辅导资料说的「诱导一次错误审批」
+```
+
+## 三级证据链（完整，逐级更强）
+
+| 级别 | 做法 | 证明了什么 |
+|---|---|---|
+| 1 | grep 读 purchaseActions | 它只读 o.status，不读 state.purchaseStatus |
+| 2 | 执行 purchaseActions() | failed 时返回的 HTML 里仍有 purchase-approve |
+| ⭐ 3 | 执行 runAction()，记录 write() 与 fetch() | failed 时 fetch("POST", …/approve) 真的被调用 |
+
+## 待办
+
+```
+[ ] 造「断网」后按三条判据观察（结果区、同步提示、业务动作）
+    ⇒ 现在「业务动作」这一条已经有硬证据了，还差前两条
+[ ] 读 5.3/5.4、第 1~3 步、第 4 步提示词、SUBMISSION 模板
+[ ] ⭐ 写页面合同（第 4 步的「观察与定义」）⇒ 实现 ⇒ 先红后绿 ⇒ 同版本复验 ⇒ 完整阻断回归
 [ ] 🚩 待本人定九件
 ```
