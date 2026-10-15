@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:22 +0800
+> 最后更新：2026-10-16 04:23 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -6704,4 +6704,92 @@ course-prepare --lesson 15 --task-id TASK-PREP-L15-… --runtime-dir .runtime/l0
 [ ] ⭐ §5.2 的前置：候选里能跑 eval.harness 吗（那个 assert 要真跑一次）
 [ ] 写六段需求为 Markdown（验收段写出新增 Eval 名称）
 [ ] 🚩 待本人：真实 L14 Task ID（§2「从已有任务导出一份事实摘要」要用）
+```
+
+---
+
+# ⭐⭐⭐ L15 §5.2 前置就绪：守卫通过、基线全绿、新用例确实不存在
+
+## §5.2 的守卫真跑过
+
+```
+root        = /…/course-worktrees/TASK-PREP-L15-37ac0a0fe9c24c379c57401c51b79cc0
+eval.harness= /…/TASK-PREP-L15-37ac0a0f…/eval/harness.py
+✅ 守卫通过：eval 来自候选自身，不是主仓库；退出码 0
+⇒ 它在防「跑到了主仓库的 eval，而对候选的改动毫无影响」
+```
+
+## 基线全绿 21/21
+
+```
+--suite all ⇒ 退出码 0，{"total":21,"passed":21,"decision":"pass"}
+注册表 eval/harness.py:24~44 共 21 条，其中与本题最相关的是 :24 inventory_export_is_stable
+合同点名的两条：:41 delivery_evidence_and_review_controls 在；raw_feedback_cannot_be_blocking 不在
+```
+
+## 合同点名的两条：一条在、一条确实不存在
+
+```
+delivery_evidence_and_review_controls ⇒ 退出码 0，{"total":1,"passed":1,"decision":"pass"}
+raw_feedback_cannot_be_blocking      ⇒ 退出码 2，error: 未知 Eval：raw_feedback_cannot_be_blocking
+⇒ 所以本讲必须新增它 —— 这正是「只增加实际 Eval 与必要测试，暂不实现目标能力」
+
+delivery_evidence_and_review_controls 的 PASS 说明已经含：
+  「完成需要具名审核；反馈默认待审且审核后不可重复改写」
+  ⇒ 实现 cases.py:433~443：add_feedback 后 status == pending_review；
+    eval-reviewer 接受；other-reviewer 再决定被拒；pending_review == 0
+  ⇒ 所以「反馈默认待审、审核后不可重复改写」已有回归保护
+    而「不能改写阻断裁判」这一侧还没有 ⇒ 新用例补的就是这一侧
+```
+
+## inventory_export_is_stable 的盲区（新用例的正当性）
+
+```
+它造两个商品、各入库，export_csv("inventory")，断言首行八列、按 SKU 排序
+⇒ 只验「有数据时」，没有验「空结果」
+  ⇒ 所以「空结果也有表头」这件事根本没用例覆盖
+    ⇒ 即使 inventory 的代码已经修了，也没有回归保护
+      ⇒ 这正是我要新增的用例的正当性（不是重复既有检查）
+```
+
+## 工作台侧：Memory 模块根本不存在
+
+```
+workbench/ 有 39 个模块，grep -rln 'memory|memor' workbench/*.py ⇒ 无输出
+⇒ 合同说的 workbench_increment 里只有「反馈审核」存在（workbench/feedback.py），Memory/RAG 要新增
+
+feedback.py 现状：DEFAULT_DB、_connect、add_feedback、review_feedback、summary、main
+状态机：status DEFAULT 'pending_review'（对应 Memory 的 candidate）；
+       decision 必须 accept/reject；非 pending_review 拒绝重复改写；UPDATE 带 CAS
+```
+
+## require_capability 的位置（查了，不是猜的）
+
+```
+eval/progression.py:78 def require_capability(capability, *, root=None)
+用例开头都调它，现有名字：stock_non_negative、receiving_idempotent、inventory_export、
+  cancel_release、illegal_transition、purchase_approval、purchase_request
+⇒ 它是「课程能力门闩」⇒ 新增用例是否要注册，要读 progression.py
+```
+
+## 我这一轮的一个错（同族第八次，这次是管道）
+
+```
+⚠️ 我先写 … | tail -6 然后读 $? ⇒ 读到的是 tail 的退出码 0
+   而真实情况是 harness.py 报了「未知 Eval」（退出码 2）
+⇒ 「看到了输出，但退出码来自管道末端」⇒ 结论会反
+  ⇒ 改法：分开跑、各自读 $?（第五节那张表就是这么来的）
+  ⇒ 同族：用弱证据下断言（这次是退出码被管道吃掉）
+```
+
+## 待办
+
+```
+[ ] 读 §1~§4、§6~§10 细则、SUBMISSION.md 模板、个人记忆集格式.md、examples/skills/
+[ ] ⭐ 读 eval/progression.py（新增用例要不要注册能力）
+[ ] ⭐ 写六段需求为 Markdown（验收段写出 raw_feedback_cannot_be_blocking）
+[ ] ⭐ §5.2：只新增检查（先写用例、不实现、跑 new.json 看它红）
+[ ] §5.3 冻结成 commit ⇒ 回控制仓库提交任务 ⇒ §6 核对产品结果
+[ ] §7~§10：Memory 登记、换事项查询、不替人采用、回收效果
+[ ] 🚩 待本人：真实 L14 Task ID
 ```
