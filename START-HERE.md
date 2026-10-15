@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:29 +0800
+> 最后更新：2026-10-16 04:30 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -7315,4 +7315,88 @@ L15 候选的真实代码（inspect.getsource）：
 [ ] ⭐ 重做冻结提交（加 empty_export_keeps_header）
 [ ] ⭐ 重跑 course-submit（--eval-case empty_export_keeps_header）
 [ ] §6 核对产品结果 ｜ §7~§10 ｜ 🚩 待本人三件
+```
+
+---
+
+# 🎉 L15 提交机制完全显现：七条事件把要求说得很准
+
+## 先说通过了什么
+
+```
+退出码 1，输出 228 行（之前三次都是 4 行，连流程都没进）
+顶层 keys: ['baseline','implementation_evidence','isolation','lesson','task']
+它建了隔离 worktree：
+  isolation = {mode: git_worktree, path: …/course-worktrees/TASK-08196401F9,
+               baseline_ref: 3c99349d5a21254df50d95576431fcd701dce9fc, detached: true}
+⇒ 基线正是我的冻结提交 ⇒「先冻结检查」这件事被它兑现了
+```
+
+## 我依次跨过的四道校验
+
+| # | 报错 | 我改了什么 |
+|---|---|---|
+| 1 | 未知 Eval：raw_feedback_cannot_become_blocking | 用例名少一个 come（18 处） |
+| 2 | 动态 Eval 必须是本次需求新增用例，不能重复静态合同 Eval | 分清身份：合同静态 ≠ 本次新增 |
+| 3 | 本次 Spec 的验收用例须明确关联：empty_export_keeps_header | 验收段要写本次新增那个名字 |
+| 4 | Spec 代码围栏未闭合 | :88 那行围栏多余，四件事被推出代码块 |
+
+## 事件链
+
+```
+:32 None   ⇒ queued   任务已接收
+:33 queued ⇒ queued   本次需求 Spec 已冻结（sha256 ceaf57a3…）
+:34 queued ⇒ queued   已创建课程隔离 Worktree（基线 3c99349）
+:35 queued ⇒ queued   执行前课程 Eval 已完成
+      summary = {total: 3, passed: 1, blocking_failed: 2, decision: block}
+:36 queued ⇒ queued   新增需求起始证据已核对
+      {accepted: False,
+       static_failed: ['raw_feedback_cannot_become_blocking'],
+       dynamic_failed: ['empty_export_keeps_header'],
+       requirement: '既有合同通过，至少一个本次新增用例真实失败'}
+:37 queued ⇒ failed   新增需求起点无效：既有合同须通过，新增用例须真实失败
+⇒ 它要的是两件事同时成立：① 既有合同（静态 Eval）必须通过 ② 本次新增用例必须真实失败
+  ⇒ 而我的 static_failed 里有一条 ⇒ ①不成立 ⇒ 起点无效
+```
+
+## 根因：workbench/memory.py 是既有合同要求的，不是本次新增
+
+```
+total: 3 ⇒ 跑了三个用例：
+  delivery_evidence_and_review_controls（合同静态，通过）
+  raw_feedback_cannot_become_blocking（合同静态，红）
+  empty_export_keeps_header（我新增的，红，这是期望的）
+⇒ 所以 raw_feedback_cannot_become_blocking 属于既有合同，必须一开始就是绿的
+  ⇒ 而它红，因为 workbench/memory.py 不存在
+    ⇒ workbench/memory.py 是既有合同要求的能力，而候选起点就缺它
+      ⇒ 它不是业务修复、不是本次新增 Eval，是补齐既有合同
+        ⇒ 而它在 --allowed-file 里
+
+正确顺序：
+① 实现 workbench/memory.py（补齐既有合同，让 static 变绿）
+② empty_export_keeps_header 仍红（它引用 suppliers 空导出，未修）⇒ 这才是本次新增的真实失败
+③ 再跑 course-submit（static_failed 空、dynamic_failed 非空）⇒ 起点有效
+```
+
+## 它的五道校验都是防空转的
+
+```
+① 名字必须是合同里的 ⇒ 防「自己编个名字糊弄」
+② 动态 ≠ 静态 ⇒ 防「把合同已要求的冒充成自己的新增」
+③ Spec 验收段必须点名 ⇒ 防「检查与需求对不上」
+④ 围栏必须闭合 ⇒ 防「Spec 结构坏了还往下走」
+⑤ 静态须绿、动态须红 ⇒ 防「起点不是真的红」或「实现前就已经绿了」
+⇒ 合起来保证：任务执行时检查已在（冻结）、实现还没（动态红）
+  而「既有合同必须绿」保证：我不是在一个坏的起点上做新增
+```
+
+## 待办
+
+```
+[ ] ⭐ 实现 workbench/memory.py（四状态、检索、撤回排除、跨项目排除、采用记录）
+    ⇒ 要让它通过 raw_feedback_cannot_become_blocking 的四条断言
+[ ] ⭐ 在候选里验证：static 绿、dynamic 仍红
+[ ] ⭐ 重新冻结（含两条检查）⇒ 再跑 course-submit
+    ⇒ ⚠️ --execute-code 说「授权 Codex 在本讲写集内修改代码」⇒ 实现者是谁要读 course_delivery 后续步骤
+[ ] 🚩 待本人 ｜ §6~§10
 ```
