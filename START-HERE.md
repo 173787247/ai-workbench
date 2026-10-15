@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:49 +0800
+> 最后更新：2026-10-16 03:50 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -4817,5 +4817,75 @@ client.py：走 http.client 发真请求
 [ ] ② §6 迁移到「库存查询」新 Task，记录经验来源/版本/适用理由
 [ ] ③ §6 同伴复验 ⇒ 我无真实同伴 ⇒ 如实标「仅自查，待同伴」
 [ ] ④ SUBMISSION.md（按 Skill 三分法、四组材料）
+[ ] 🚩 待本人定七件（第 0 件：两个最小入口落哪一侧）
+```
+
+---
+
+# ⭐⭐⭐ L13 续：撞上一道真实的门（比预期更好）
+
+## 先纠正两处我自己的错
+
+```
+⭐ 库路径确认：platform_api.py:47  self.tasks = TaskStore(self.runtime_dir / "tasks.db")
+   ⇒ HTTP 进程用 tasks.db；我上一轮开 workbench.db 是错的
+   ⇒ 所以那个 KeyError 是「两个库」，不是「数据丢了」
+⚠️ 两处调用签名错（都是我的探针）：
+   · transition(tid, target, "LinZhou", detail=…) ⇒ TypeError（detail 重复）
+   · review(tid, "LinZhou", "accept", …) ⇒ ValueError（必须是 approve 或 reject）
+```
+
+## 撞上的那道门 —— 本轮最重要的发现
+
+```
+evaluating → review ⇒ ✅ 成功（version 12 → 13）
+review(…, "approve", …) ⇒ ⚠️ ValueError: 阻断级 Eval 未通过，不能批准完成
+⇒ 这是一道真实的守卫：审核批准要求阻断级 Eval 真的通过
+  ⇒ 而我的任务从来没跑过 Eval，result 是空的 ⇒ 所以它拒绝
+  ⇒ 这是正确的行为，不是缺陷
+  ⇒ ⚠️ 所以「已完成任务重启后仍读到」这一条我这次没拿到 completed，如实记
+```
+
+## 而「跨重启存活」这条证了（用 review 状态）
+
+```
+起新进程 PID5 = 703601，端口 45529（又与 702911/703013/703488 不同）
+GET /api/v1/tasks/TASK-60B410C0E6 ⇒ HTTP 200
+   id 相同；status = "review"；version = 13；reviewed_by = null
+   error = "服务重启时任务停在 evaluating，已转入安全重放"
+GET /api/v1/delivery/views/TASK-60B410C0E6 ⇒ HTTP 200
+   status=review；human_decision_recorded=False
+   ⭐ next_action = {"action":"human_review","label":"等待具名审核",
+                     "reason":"检查已完成，但还没有人作出决定"}
+⇒ 三件事都成立：
+   ① 状态跨真重启存活（review 从进程 4 活到进程 5）
+   ② 视图按状态给出正确的下一步（review ⇒ human_review；queued ⇒ wait）
+   ③ 视图明确说「还没有人作出决定」，没有替人署名
+⚠️ 而 completed 那条被 Eval 守卫挡着，因为我的任务没跑过真 Eval
+   ⇒ 要证它得让一个任务真的跑完阻断级 Eval
+     ⇒ 那需要 eval_command 可执行（§5 发现 python 不在 PATH ⇒ 要配 python3）
+```
+
+## version 的增量又得到一次印证
+
+```
+version：1 → 9 → 12 → 13
+   9：推到 evaluating 之前（恢复在 +1）
+   12：又起了两个进程 ⇒ 每次恢复 +1
+   13：evaluating → review 那一次迁移
+⇒ version 混合了两种增量：① 状态迁移（:298 的 CAS 那条）② 恢复重放
+  ⇒ 它不是「业务版本号」：同一份数据的不同进程会把它推高
+    ⇒ 更不能拿它当客户端并发比较的依据
+      ⇒ 完全印证 Skill：「不凭字段存在声称支持客户端并发比较」
+```
+
+## 待办
+
+```
+[ ] ① 修 eval_command（python3 而非 python），让一个任务真跑完阻断级 Eval，
+    再验「已完成任务跨重启仍读到 completed」
+[ ] ② §6 迁移到「库存查询」新 Task，记录经验来源/版本/适用理由
+[ ] ③ §6 同伴复验 ⇒ 无真实同伴 ⇒ 如实标「仅自查，待同伴」
+[ ] ④ SUBMISSION.md（Skill 三分法、四组材料）
 [ ] 🚩 待本人定七件（第 0 件：两个最小入口落哪一侧）
 ```
