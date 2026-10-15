@@ -8588,3 +8588,65 @@ accepted = True；changed_files = ['flowerp/reports.py']；out_of_scope_files = 
 [ ] 🚩 待本人：A 与 B 的具名审核、MEM-L15-EXPORT-EMPTY-001 改 active、
     采用决定的决定人与理由、§10 原反馈者复验
 ```
+
+---
+
+# ✅ L15 完成：`SUBMISSION.md`（七节 ✗ 30 个文件）
+
+## 模板要七节，而 §1 的四个引导问题正是本讲的概念考点
+
+```
+§1 首次判断与修订：「空白导出说明什么」「检查全绿是否可以写已发布」
+   「接受反馈能否直接改变阻断规则」「复验后如何修订、依据是什么」
+§2 摘要与周报 ｜ §3 反馈三层记录 ｜ §4 个人建设与失败
+§5 Memory 记录（含「高相似撤回条目的失败实验与过滤结果」）
+§6 RAG 检索、引用与评测（含 Precision@k、Recall@k、空结果、快照 sha256）
+§7 人的复验与迁移（含「Skill 首次预测、真实输出、漏判与修订」）
+⚠️ 「填写个人真实记录；无证据处标为未完成，不保留虚构示例」「缺项回本讲续做」
+```
+
+## 四个引导问题我的原答案
+
+```
+① 空白导出说明什么 ⇒ 合法空结果丢失了文件结构；不能说明查询失败或没权限
+   （同库三查询都 200、items=0）⇒ 空文件与拒绝是两件事
+   后来还发现同一句话能掩盖第三种：我给不出结构 ⇒ B 就是这么来的
+② 检查全绿是否可以写已发布 ⇒ 不可以。A 与 B 的 post_summary 都 3/3 pass、accepted=True，
+   而两者 status 都是 review、reviewed_by=None ⇒ 连导出候选都被 course_release.py:190 拦住
+③ 接受反馈能否直接改变阻断规则 ⇒ 不可以。三处证据：
+   raw_feedback_cannot_be_blocking 这条 Eval 本身在验它；
+   memory_rag_lab 的 filters.status=active 排除 candidate（实测返回 []）；
+   to_csv 无规格的空结果明确拒绝
+④ 复验后如何修订 ⇒ 依据复验的原始输出，不是「我记得」；
+   保留版本、撤回保留原因和旧采用记录、不改写历史（fixture 里放了一条 revoked 反例）
+```
+
+## 七节里我写足与如实标的
+
+```
+✅ 写足：A/B 两个 Spec、两个 Task、Diff、独立 Eval（2/3 block ⇒ 3/3 pass）、
+   四条报表规格、字节数 61/117/101/0⇒88、高相似撤回条目的过滤实验（score 0.9091 排第一
+   但默认不进，--include-revoked 才出现且带 warning）、四条预测反例与漏判
+🚩 如实标缺：人审（两个 Task 都 review）、reviewed_by、采用决定、原反馈者复验、
+   Spec 的「本人确认版」、--actor 真实姓名
+⚠️ 未做：真实浏览器走查、工作台首页入口链路、周报、下载/篡改面
+⚠️ 新缺口：ar_aging 返回 dict 没有 CSV 出口；L14 的 Escape 焦点按 review-cases 关联为新观察
+```
+
+## 尚未完成十条（缺项回本讲续做）
+
+```
+🚩 ① A 与 B 的具名审核 ② 两条记忆改 active ③ 采用决定 ④ 原反馈者复验
+   ⑤ Spec 的本人确认版 ⑥ --actor 真实姓名
+⚠️ ⑦ 真实浏览器走查 ⑧ 工作台首页链路 ⑨ ar_aging 的 CSV 出口 ⑩ L14 的 Escape 焦点
+```
+
+## 状态
+
+```
+L01~L14 ✅ ｜ **L15：§1~§10 + SUBMISSION 全部完成** ✗ 30 个文件
+参考仓库 0 改动 ｜ 两个 Task 都停在 review
+改动：workbench/memory.py（新增）、eval/cases.py、eval/harness.py（两个候选各一份）
+      tools/l15-codex-exec.py（平替件）
+下一步：进 L16（结营：工作台现场交付一个此前未实现的小需求）或按你的裁定处理积累事项
+```
