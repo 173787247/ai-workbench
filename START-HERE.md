@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:55 +0800
+> 最后更新：2026-10-16 04:56 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -9215,4 +9215,54 @@ out_of_scope_files = []
 [ ] ⭐ M 区：合同最终入口与独立演示
 [ ] ⭐ 写 L16 的 SUBMISSION.md（七节，含五分钟答辩、技术债、下一事项迁移）
 [ ] 🚩 待本人：事项编号、运行目录、实际构建者姓名、现场需求抽取、答辩、人审
+```
+
+---
+
+# 🎉 L16 H 区完成：真 HTTP 三层证据
+
+```
+候选：…/course-worktrees/TASK-FE48B898DB（正式候选）
+起服务：workbench.cli serve --host 127.0.0.1 --port 18160 --runtime-dir <候选>/.runtime/l16-preview
+健康：HTTP 200，schema version 17，integrity ok，foreign_key_errors []
+造数：mock-data ⇒ 退出码 0 ⇒ 8 个商品、11 行库存
+登录：POST /api/v1/auth/login ⇒ 200，ORG-DEFAULT，roles ['admin']
+  ⚠️ 默认口令不在代码里 ⇒ 我用 create_user(SYSTEM_PRINCIPAL, …, role_codes=['admin']) 建了预览账号
+```
+
+## 三层证据
+
+```
+① 正常：?keyword=椅 ⇒ 2 行（MOCK-CHAIR available 0 与 16）
+        ?keyword=USB ⇒ 1 行（MOCK-CABLE-C）
+        （不带关键词）⇒ 11 行 / 8 个不同商品
+   ⇒ 中文命中 p.name、英文命中 p.sku ⇒ 两条 LIKE 路都生效
+② 空结果：?keyword=ZZZNOMATCH ⇒ 0 行 ⇒ 明确空结果，不是旧列表
+③ 只读：查询前后库存行相同 True；流水条数 22 ⇒ 22
+④ 服务日志原始请求行："path": "/api/v1/inventory/balances?keyword=%E6%A4%85"
+                     "path": "/api/v1/inventory/balances?keyword=USB"
+```
+
+## 我在这一区第三次踩了同一个坑
+
+```
+⚠️ create_user 的参数名：我读了签名（role_codes: Iterable[str]），却写了 roles=
+   ⇒ TypeError: got an unexpected keyword argument 'roles'
+   ⇒ 签名就在同一屏输出里，而我还是写错了
+     ⇒ 本轮同族错误第三次：
+       ① create_organization（不存在）
+       ② Principal(roles=…)（字段是 permissions，且是 dataclass 位置传参）
+       ③ create_user(roles=…)（参数是 role_codes）
+       ⇒ 三次都是「我假设了名字，而不是照抄刚看到的」
+```
+
+## 待办
+
+```
+[ ] ⭐ I 区：测试/Loop/Graph ｜ J 区：正式 Task 人审（🚩 待本人）
+[ ] ⭐ K 区：独立恢复教学实验（examples/restore_lab.py）
+[ ] ⭐ L 区：结果导出、实际反馈与真实索引（发布证据索引）
+[ ] ⭐ M 区：合同最终入口与独立演示
+[ ] ⭐ 写 L16 的 SUBMISSION.md（七节，五分钟答辩、技术债、下一事项迁移）
+[ ] 🚩 待本人：事项编号、运行目录、实际构建者姓名、现场需求抽取、答辩、人审、周宁复验
 ```
