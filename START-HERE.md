@@ -7537,3 +7537,78 @@ accepted 的两个条件：
 [ ] ⭐ 重跑 course-submit（--eval-case empty_export_keeps_header；--allowed-file 只两个业务文件）
 [ ] §6 核对产品结果 ⇒ §7~§10 ｜ 🚩 待本人
 ```
+
+---
+
+# 🎉 L15 起点证据通过，走到受控执行（唯一拦路石是没有 codex）
+
+## 事件链比上次前进了六条
+
+```
+:42 queued     ⇒ queued      新增需求起始证据已核对     ← 这次过了
+:43 queued     ⇒ spec_ready  结构化 Spec 已校验
+:44 spec_ready ⇒ executing   开始受控执行
+:45 executing  ⇒ executing   受控执行阶段完成
+:46 executing  ⇒ rework      受控执行失败，保留证据并等待有界重试
+:47 rework     ⇒ rework      课程红绿差分判定已完成
+```
+
+## :42 的 pre_summary 正是要的
+
+```
+pre_summary = {total: 3, passed: 2, blocking_failed: 1, decision: block}
+⇒ 三个用例：delivery_evidence_and_review_controls 绿、
+            raw_feedback_cannot_become_blocking 绿（memory.py 补齐后）、
+            empty_export_keeps_header 红（这才是「本次新增真实失败」）
+⇒ static_failed 空、dynamic_failed 有 ⇒ 起点有效
+```
+
+## memory.py 确实要进冻结提交
+
+```
+冻结提交 7321256 含 eval/cases.py(+112)、eval/harness.py(+2)、workbench/memory.py(+268)
+  ⇒ 3 files, 382 insertions
+上次 3c99349 不含 memory.py ⇒ static_failed 有那条 ⇒ 起点无效
+这次含它 ⇒ 起点有效
+⇒ 所以上一节的结论对了，而 course_workspace.py:198~215 的原文把它说清了
+```
+
+## 唯一的拦路石：没有 codex
+
+```
+:45 evidence：provenance=codex_cli，success=False，mode=codex_exec，
+   message="Codex 退出码为 127"
+   invocation={'command': ['codex','exec','--json','--sandbox','workspace-write',
+               '--ephemeral','--output-schema','/ho…']}
+:47 checks = {baseline_was_red: False, candidate_is_green: False, candidate_changed: False}
+   changed_files = []   ← 因为 127，没有改动，差分全 False
+⇒ 127 = command not found，它调 codex 而这台机器没有
+  ⇒ 这正是用户最初交代的：「老师用 CODEX跑，但你是 deepseek harness，
+    所以我想平替 codex，请你当 codex 替代它来跑」
+```
+
+## 两条可行路径
+
+```
+路径 A：workbench/codex_command.py:8 explicit = executable or os.getenv('FLOWERP_CODEX_COMMAND')
+        ⇒ 设 FLOWERP_CODEX_COMMAND=<我的平替件>
+路径 B：放一个叫 codex 的可执行文件到 PATH（更透明但影响全机器）⇒ 优先 A
+```
+
+## 但我 L04 那个平替件接口不对
+
+```
+tools/codex-substitute.py（322 行）有 l05/l07/l09/l10 分支，按工作区内容决定改什么
+而这次要的是 codex exec --json --sandbox workspace-write --ephemeral --output-schema <path>
+⇒ 要读 codex_command.py 与调用方，看它吃什么、吐什么、在哪个目录跑
+```
+
+## 待办
+
+```
+[ ] ⭐ 读 workbench/codex_command.py 全文
+[ ] ⭐ 读调用方（agent_loop.py:200~210 的 SessionCodexStreamer、codex_events.py）
+[ ] ⭐ 扩平替件加 exec 子命令，或新写一个更聚焦的
+[ ] ⭐ 设 FLOWERP_CODEX_COMMAND，重跑 course-submit
+[ ] §6 核对产品结果 ⇒ §7~§10 ｜ 🚩 待本人
+```
