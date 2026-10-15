@@ -13,7 +13,7 @@
 | **L01** | ✅ **§1~§8 完成** | 五个账本命令 ✗ `bootstrap.py` 274 行 ✗ 红→Diff→绿三条原始记录 |
 | **L02** | ✅ **§1~§6 完成**（**§7 待本人签**）| `AGENTS.md` 5 → 99 行 ✗ N0/N1 对照 ✗ 补了 3 条不变量 |
 | **L03** | ✅ **8/8 检查通过** | `spec.py` 134 行 ✗ 六段模板 ✗ `FDE_SPEC.md` ✗ 三份输入复验 |
-| **L04** | 🟡 **§1~§4 完成 ✗ 重修后二次复验在跑** | `task_store.py` 158 ✗ `execution.py` **270** ✗ `eval/harness.py` 126 ✗ CLI 204（**11 命令**）|
+| **L04** | 🟡 **A 与 B 都做完 ✗ 都在等具名接受** | Ticket A：`execution.py` 286 ✗ `task_store.py` 158 ✗ `eval/harness.py` 126 ✗ CLI 204（**11 命令**）✗ Ticket B：候选 +39 行 ✗ **五个用例全 pass** |
 | **L05~L16** | ❌ **未开始** | 计划见 `tools/L02-L16-PLAN.md` |
 | **结营毕设** | ❌ 未开始 | |
 
@@ -204,4 +204,60 @@ Q2 「交付一次都没提交」
 ❌ **R4**：退出码 0 但一字未改 ⇒ `ok=true` ⇒ 可解锁人工接受
 ❌ **本机没装 Codex CLI** ⇒ `run_candidate` 跑的是**给定命令**✗ 不是真的 `codex exec`
 ❌ **§5~§7（Ticket B）未做** —— **手册：A 未接受 ✗ 不启动 B** ✗ **而接受必须由具名的人作**
+```
+
+
+---
+
+# ⭐ L04 Ticket B（**通过 A 交付库存导出**）
+
+## ⭐ 执行前的决定性问题：**能力已经存在**
+
+```
+`flowerp/import_export.py:248-262` 的 `export_csv(principal,"inventory")` **本来就已经正确**：
+  权限 `reports.read` ✓  · SQL 里算 `b.on_hand-b.reserved AS available` ✓
+  · **八列名与顺序恰好是 L03 合同的** ✓  · `ORDER BY p.sku,s.code,l.code,b.lot_id` ✓
+⇒ ⭐ **四个 content 用例在"未改的候选"上就全部通过**（**第一次运行 ✗ 退出码 0**）✓
+⇒ 手册：「**参考仓库已有能力可以复验 ✗ 学生自己缺少的能力才需要建设**」✓
+⇒ ⚠️ **所以 Ticket B 是"复验 + 补唯一缺口"✗ 不是"从零实现"** ✓
+```
+
+## 补的那一块
+
+```
+⭐ 唯一缺口：`--file-entry` 要 `function(store, target_path)` ✗ 现成的 `export_csv` 返回字符串
+⇒ 补 `export_inventory_to_file(store, target)`（**+39 行**）：
+   · **同目录**临时文件（**跨文件系统时 `os.replace` 不是原子替换**）
+   · `flush()` + `os.fsync()` ✗ `os.replace()` ⇒ **写成后才替换**
+   · `except BaseException:` ⇒ **清理临时文件** ✗ **`raise` 把异常报给调用者**
+```
+
+## ⭐ 五个用例的真实结果（`--case all` ✗ **退出码 0**）
+
+```
+normal    ✅ 东仓 8,3,5 ✗ 西仓 12,4,8 —— **与手册的预期数字一致**
+empty     ✅ **只有八列表头**
+special   ✅ 中文 ✗ 逗号 ✗ 双引号 ✗ **换行**全部保真
+ordering  ✅ 四行按 sku,site,location,lot_id 升序
+file-failure ✅ with-old 与 without-old 都：
+              triggered=True ✗ error=OSError ✗ database_unchanged=True ✗ target_preserved=True
+              ✗ **目录里没有 .tmp 残留**（**临时文件被清理** ✓）
+业务账    ✅ 六次 before.json == after.json 全为真
+写集      ✅ **只有 flowerp/import_export.py**（+39 行）✗ 源仓库 **0 改动**
+```
+
+## ⚠️ 两条如实标注
+
+```
+⚠️ **A 是 `pending_human_review`** ✗ 手册要求「A 未接受不启动 B」✗
+   本次是在本人「连续推进」授权下**带标记执行**的 ⇒ **不掩盖** ✓
+⚠️ **两套"可用量"仍在**：`service.py:105` 的旧 `export_inventory()` 硬编码 `MAIN,STOCK,` ✗
+   用旧表 `products`/`stock` ⇒ **与 `import_export.py:250` 两个口径** ✗
+   ⚠️ **要不要删它不在本 Ticket 的写集里**（**写集只有 `import_export.py`**）⇒ **遗留问题 ✗ 由人决定** ✓
+```
+
+## 复验
+
+```
+🟡 **B 的独立复验在跑**（**子代理 `63a23633-…` ✗ 工作区 /tmp/l04-verifyB ✗ 已提交可锚定**）
 ```
