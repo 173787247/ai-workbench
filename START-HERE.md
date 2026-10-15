@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 03:32 +0800
+> 最后更新：2026-10-16 03:33 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -3950,4 +3950,75 @@ if not isinstance(results, list) or not results:
 ```
 [ ] **第 4 步：在自己的候选里实现两个接口** ⇒ **先看候选里已有什么**
 [ ] **§5 真实采购与库存核对**（**要证有副作用的动作**）✗ **§6 同伴复验 ✗ 迁移**
+```
+
+
+---
+
+# ⭐⭐⭐ L13 §4 起步：候选已建 ✗ 起点与 L10/L12 **不同**
+
+## ⭐⭐ 课程合同（**两处与前几讲不同**）
+
+```
+`phase`: ⭐ **"operate"**（**L10/L11/L12 都是 `"build"`**）
+⭐ `write_scope`: ⭐ **`workbench/`** ✗ `flowerp/` ✗ `eval/` ✗ `tests/`
+   ⇒ **本讲要改工作台本身**（**L12 那次写集不含 `workbench/`**）
+`request`: "**从 Task API 提交补货需求 ✗ 生成 Spec ✗ 执行 Eval ✗ 并停在具名人工审核。**"
+⭐ `acceptance`: ① **API 接受请求后返回 Task ID 而非伪称完成**
+                ② **任务事件可追溯到需求 ✗ 业务对象和 Eval**
+                ③ ⭐ **全绿后仍停在人工审核**
+```
+
+## ⭐⭐⭐ 工作树 vs HEAD：**没有 `if False and`**
+
+```
+$ git diff HEAD --stat
+ course/baselines/PROGRESSION.json | 16 ----------------
+ 1 file changed, 16 deletions(-)
+⇒ ⭐ **只有 `PROGRESSION.json` 被删 ✗ `flowerp/service.py` 一个字没动**
+⇒ ⭐⭐ **与 L10/L12 完全不同** —— **那两讲都有 `if False and` 的剥离**
+   ⇒ ⭐ **本讲是"能力不存在"型 ✗ 与 L11 同类**
+```
+
+## ⭐⭐⭐ 首红：两个用例**都 PASS**（退出码 0）
+
+```
+[PASS] `purchase_requires_approval`             「**未审批被阻断 ✗ 审批后可入库**」
+[PASS] `delivery_evidence_and_review_controls`  「**需求自动生成任务级 Spec 并推进至审核；
+       完成需要具名审核；反馈默认待审且审核后不可重复改写**」
+⇒ ⭐ **起点红不在已有用例上** ⇒ **要问"本讲的增量在哪"**
+```
+
+## ⭐⭐⭐ 增量 = **两个最小 API 端点不存在**
+
+```
+关键词扫描 `workbench/*.py`：
+  `def submit` ✗ `task_id` ✗ `202` ✗ `evaluating` ⇒ **都有**
+  ⚠️ **`status_url`** ⇒ **没找到** ｜ ⚠️ **`delivery-view`** ⇒ **没找到** ｜ ⚠️ **`409`** ⇒ **没找到**
+⇒ ⭐ **参考实验里的三样在候选里都不存在** ⇒ **正是本讲要实现的"两个最小接口"**
+⇒ ⭐⭐ **而 `delivery_evidence_and_review_controls` 覆盖的是"任务级 Spec ✗ 具名审核 ✗
+   反馈待审"✗ 不是 HTTP 端点** ⇒ **两层检查不冲突**
+```
+
+## ⭐ 参考实验给的六个响应形状（**从报告读 ✗ 不猜**）
+
+```
+202 ⇒ `{"task_id": …, "accepted": true, "execution_mode": "verify",
+        "status_url": "/api/v1/tasks/<id>", "view_url": "/api/v1/delivery/views/<id>"}`
+200 ⇒ `{"id": …, "status": "evaluating"|"review"|"completed", "error": …, "spec_path": …}`
+409 ⇒ `{"error": "conflict", "message": "提交键已用于不同需求；请使用新键"}`
+404 ⇒ `{"error": "not_found", "message": "'TASK-MISSING'"}`
+400 ⇒ `{"error": "ValueError", "message": "非法任务状态迁移：completed -> completed"}`
+400 ⇒ `{"error": "ValueError", "message": "网页API只允许verify；代码执行须使用明确授权的课程CLI"}`
+⇒ ⚠️ **"照抄形状"不等于"照抄实现"** ⇒ **要看清候选侧有什么可复用的**
+```
+
+## 下一步
+
+```
+[ ] 读 §4.2 接口合同提示词 ✗ §4.3 实现提示词
+[ ] ⚠️ **先查候选侧已有的 HTTP 服务**（`api_v2.py` ✗ `platform_api.py`）
+    ⇒ **依据 L10/L11/L12 的教训：真模块不一定在第一眼看的文件里**
+[ ] 写六段式 Spec ⇒ 实现两个端点 ⇒ §5 真实采购核对 ⇒ §6 同伴复验 ✗ 迁移
+[ ] 🚩 **事项编号 ✗ 工作台登记** ⇒ **待本人**
 ```
