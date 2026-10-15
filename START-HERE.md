@@ -7007,3 +7007,26 @@ $ git log --oneline course/l15-start..HEAD
 [ ] **读 §1~§4 ✗ §6~§10 细则** ✗ **`SUBMISSION.md` 模板** ✗ **`个人记忆集格式.md`** ✗ **`examples/skills/`** ✓
 [ ] 🚩 **待本人**：**真实 L14 Task ID** ✗ **Spec 的"本人确认版"** ✗ **实际构建者署名** ✓
 ```
+
+
+---
+
+# ⭐⭐⭐⭐⭐ L15 §5.2/§5.3 完成：四个报告构成完整因果链
+
+```
+all.json        21/21 pass    ← 基线全套件
+old.json         1/1  pass    ← 合同点名的既有用例，改动前是绿的
+new.json         1/0  block   ← 新检查在起点红（ModuleNotFoundError: workbench.memory）
+after-add.json  22/21 block   ← 加了检查后只有新那条红，其余 21 条不受影响
+⇒ 四个都存证在 lesson-15-submission/09-check-frozen/
+⇒ 冻结提交 fde24f2f6023be2814b219bcc049549314a50090（位于 course/l15-start 之后）
+```
+
+**报告的真实字段名**（我先猜了 `cases`，错了）：
+```
+顶层 = ['generated_at', 'requested_cases', 'results', 'schema_version', 'suite', 'summary']
+⇒ summary 里是计数，results 是逐条列表
+```
+
+**一处补救**：手册那条命令一次跑两条，而新用例在 old 时点还不存在 ⇒ `old.json` 只跑既有那条，
+这反而更符合「改动前基线」的语义。手册与现实的这个落差记下了。
