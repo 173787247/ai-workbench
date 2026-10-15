@@ -3691,3 +3691,53 @@ if not isinstance(results, list) or not results:
 ```
 ⚠️ **PPT（29 页）** ✗ **`reference/参考说明.md`** ✗ **`assets/README.md`**
 ```
+
+
+---
+
+# ⭐⭐⭐ L12 PPT 对照 ✗ 一处按 PPT 改的实现
+
+## ⭐⭐ PPT 那句「一个 `approved` 字符串不足以放行」= 我 L12 做的两件事
+
+```
+**交付审核**：审核人根据**候选 X ✗ Diff 与报告 R-X** 决定 ✓
+**采购审批**：业务负责人批准 **PR-TARGET 的商品和数量** ✗ 才允许入库 ✓
+⇒ ⭐ **`report_candidate`**（审核对象绑"哪一版"）✗ **`Conflict`**（同一个键属于谁）✓
+```
+
+## ⭐⭐ 执行器四步（**PPT 讲的 ✗ 我全做到了**）
+
+```
+① 读取：**恢复时读原状态 ✗ 而非从 `develop` 重来** ⇒ `_load_state` ✓
+② 执行：**有动作名称 ✗ 仍须确认动作真的执行** ⇒ `develop_execution` ✗ 无入口就 `stopped` ✓
+③ 选择：**记录 `from` ✗ `to` ✗ `reason` 和轮数** ⇒ `move()` ✓
+④ 交还控制：**到等待点保存后暂停** ⇒ `awaiting_human_review` 是终态 ✗ 打回也结束本次执行 ✓
+⭐ 「**列出所有允许路径。`trace` 只记录本次实际走过的路径。**」⇒ `_EDGES` vs `trace` ✓
+```
+
+## ⭐⭐⭐ 一处 PPT 指出我的真差别 —— **已改**
+
+```
+> 「**候选改变后旧报告**保留为历史**✗ 但不能继续充当新候选的通过依据。**」
+⚠️ **我原来是 `report = None`** ⇒ **那是清掉 ✗ 不是"保留为历史"** ✓
+✅ **改为**：**旧报告移进 `report_history`**（`candidate` ✗ `superseded_by` ✗
+   `superseded_at` ✗ 原报告）**再清空当前报告** ✓
+⭐ 实测：打回后 **`history=1`** ✗ 旧候选 `X` ✗ 被 `X-R2` 取代 ✗ 旧报告还在 ✗
+   当前已清 ✗ 新报告绑 `X-R2` ✗ 历史仍保留 ✓
+```
+
+## ⭐ 另外两句
+
+```
+⭐⭐ 「**开发节点无权替人写入 `approve`。**」⇒ 正合我不代签 ✓
+⚠️ PPT 自己的表：`DeliveryState` ⇒ 「**候选与报告绑定尚未完整实现**」
+   ⇒ ⭐ **参考承认的缺口 ✗ 我补了** ✓
+```
+
+## 九项必读状态
+
+```
+[x] README ✗ 辅导资料 ✗ 手册 ✗ SUBMISSION ✗ ⭐ **PPT（296 行）** ✗
+[x] examples（**Graph 16 + 采购 9**）✗ [x] skills（**SKILL + 五个反例**）
+⚠️ `reference/参考说明.md` ✗ `assets/README.md` ⇒ 仍未读
+```
