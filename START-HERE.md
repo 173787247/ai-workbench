@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:58 +0800
+> 最后更新：2026-10-16 04:59 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -9328,5 +9328,79 @@ reviewer = null；review_decision = null；reviewed_at = null
     ⚠️ course-candidate-export 仅在 status=completed 时执行 ⇒ 本轮不能做
 [ ] ⭐ M 区：合同最终入口与独立演示（demo --runtime-dir 新目录；会重置教学账本）
 [ ] ⭐ 写 L16 的 SUBMISSION.md（七节，五分钟答辩、技术债、下一事项迁移）
+[ ] 🚩 待本人：事项编号、运行目录、实际构建者姓名、现场需求抽取、答辩、人审、周宁复验
+```
+
+---
+
+# ⭐⭐⭐⭐⭐ L16 K/L/M 三区全部完成
+
+## K 区：恢复教学实验（退出码 0）
+
+```
+前置 environment-check --product ⇒ 0（四个 ok:true）
+脚本 docs/courses/L16/examples/restore_lab.py（87 行）⇒ --output-dir 必须是尚不存在的新目录
+⇒ 退出码 0，report.json 十六个键：
+  kind = "controlled-reference-experiment"（它是受控参照实验，不是生产演练）
+  is_cold_start = false；is_production_rollback = false（诚实标注）
+  at_backup 8 ⇒ source_after_new_receipt 10 ⇒ restored_quantity 8（恢复正确地回到 8 件）
+  source_event_keys 两个 ⇒ restored_event_keys 只有 receipt-before-backup
+  restore_integrity {ok:true, quick_check:"ok", foreign_key_errors:0, schema_version:17}
+  duplicate_restore {error:"FileExistsError", target_hash_unchanged:true}
+  damaged_copy_restore {error:"RuntimeError", target_exists:false}
+  source_final_quantity 10（源库没被污染）
+  lesson「恢复正确地回到8件；备份后新增2件不在恢复副本中，不能直接覆盖当前业务库」
+⇒ 正常、失败、失败后不变状态三层齐全
+```
+
+## L 区：结果导出与实际反馈
+
+```
+① task-show 导出 ⇒ 退出码 0，55043 字节，26 个顶层键
+   含 spec、spec_path、spec_sha256、write_scope、events(11)、business_refs、result
+   status=review，reviewed_by=None，review_decision=None
+   ⇒ 这份导出本身就是发布证据索引的原料
+② course-candidate-export ⇒ 退出码 1
+   ValueError: 只有具名审核通过并 completed 的课程任务可以导出候选
+   ⇒ 正是 L 区「仅在具名接受后的 task.status=completed 时执行」
+     ⇒ 而系统自己拦住了，比「我记得不该做」强
+③ feedback --runtime-dir ⇒ 退出码 0，全 0
+   ⇒ M 区原文解释：原命令默认读当前目录的 .runtime/workbench.db；
+     L 区调同一 summary 函数，读的是原工作台库 ⇒ 「0」是这个库的真实读数
+```
+
+## M 区：合同最终入口与独立演示
+
+```
+前置：environment-check --product ⇒ 0；演示目录 .runtime/l16-demo-<uuid> 尚不存在（先检查）
+⇒ 退出码 0，场景「电商笔记本订单库存履约」，stage_key=shipped，is_complete=true
+七个事件含两个 blocked：
+  stage 2 blocked「SKU NOTEBOOK-AI 库存不足：需要 20，可用 8，缺口 12」
+  stage 3 blocked「采购 PO-DEMO-20260817 未审批（需具名审批），不允许入库」
+  stage 4 success「运营审批完成，到货 12 台已按幂等键入库」
+  stage 5 success「20 台库存原子预占成功，订单可以出库」
+时间线七步闭合：stocked → orders → shortage → blocked → received → reserved → shipped
+metrics {opening_stock:8, order_demand:20, shortage:0, available:0}
+⇒ 逐条对上 AGENTS.md 的四条业务边界：可用库存不得为负、预占原子化、入库幂等、
+  采购必须具名审批后才能入库
+```
+
+## 手册 M 区的入口对照表（照它核）
+
+```
+workbench.cli demo ⇒ 本区（委托独立 FlowERP 运行参考业务链，写入专用演示目录）
+eval.harness --suite blocking ⇒ G/I 区
+agent.loop ⇒ I 区，默认检查收敛不等于实际 Codex 返工
+agent.graph ⇒ I 区，自动演示批准不能代替人的决定
+workbench.feedback summary ⇒ 原命令默认读当前目录的 .runtime/workbench.db
+```
+
+## 待办
+
+```
+[ ] ⭐ J 区：正式 Task 人审（task-review，回控制实例，🚩 待本人）
+[ ] ⭐ L 区剩下的：实际反馈（需要真实反馈者，🚩 待本人）
+[ ] ⭐ 写 L16 的 SUBMISSION.md（七节，五分钟答辩、技术债、下一事项迁移）
+[ ] ⭐ 发布证据索引（需求、Diff、Eval、人审、剩余风险）
 [ ] 🚩 待本人：事项编号、运行目录、实际构建者姓名、现场需求抽取、答辩、人审、周宁复验
 ```
