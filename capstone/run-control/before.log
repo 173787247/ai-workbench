@@ -1,0 +1,15 @@
+[PASS ] spec_contract_rejects_ambiguity          1 ms  六段结构完整且唯一；代码示例保留为正文，缺项/空白/重复/错序/未知章节均拒绝
+[PASS ] isolated_report_contract_is_honest       0 ms  隔离报告逐项对账，退出码矛盾、空用例与身份替换均拒绝
+[PASS ] bootstrap_evidence_is_honest            42 ms  参考实现：缺证据失败、同案前红/Diff/后绿可定位，完整性检查不替代人审
+[PASS ] plugin_lifecycle_is_reversible           2 ms  Provider 按依赖逆序卸载并重载；失败副作用被清理、旧组合恢复，监听器无残留
+[PASS ] delivery_evidence_and_review_controls   860 ms  需求自动生成 Spec 并推进至审核；失败自动沉淀为幂等待审反馈；完成与反馈提升均保留具名人审
+[PASS ] initiative_delivery_is_controlled      964 ms  本地契约夹具：真实候选 Eval 子进程、具名人审与隔离合入，失败保留返工；不代表真实客户或学生验收
+[PASS ] learning_reuse_is_evidence_bound      2158 ms  本地跨事项契约夹具：A 来源、B 显式试用/Eval/具名验收后发布、C 默认复用通过、D 失败停用；保留来源和采用证据，不代表真实学习闭环
+[PASS ] web_api_and_persistence_projection_agree   337 ms  工作台任务受理、幂等与持久化一致；全绿停在人审；不创建 ERP 数据库
+[PASS ] ci_evidence_envelope_is_honest           1 ms  CI 信封绑定提交与 Run；缺报告或缺身份不得假装成功
+[PASS ] write_sets_reject_conflict               0 ms  共享写集、目录覆盖与读写依赖不得并行；只读子任务可以并行
+[PASS ] raw_feedback_cannot_become_blocking     79 ms  原文反馈必须先具名接受才能立项；接受也不等于改写当前 blocking 裁判
+[PASS ] no_committed_secrets                    41 ms  文本源文件未发现常见密钥特征
+[PASS ] course_assets_present                    0 ms  关键课程资产齐备
+[PASS ] ecommerce_lineage_is_declared            0 ms  电商能力均有需求编号；未经工作台交付的标为挑战，不计入学员本人成果
+{"total": 14, "passed": 14, "blocking_failed": 0, "observing_failed": 0, "decision": "pass"}

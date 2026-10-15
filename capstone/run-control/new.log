@@ -1,0 +1,2 @@
+[PASS ] ar_aging_export_keeps_columns          106 ms  FlowERP：/home/rchua/GO/flowERP-customer；ar_aging_export_keeps_columns；退出码 0；应收账龄导出走明细七列、空结果留列名、不混汇总、只读，且权限拒绝不伪装成空文件
+{"total": 1, "passed": 1, "blocking_failed": 0, "observing_failed": 0, "decision": "pass"}

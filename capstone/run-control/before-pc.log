@@ -1,0 +1,20 @@
+[PASS ] inventory_export_is_stable             147 ms  FlowERP：/home/rchua/GO/flowERP-customer；inventory_export_is_stable；退出码 0；库存导出字段固定、按 SKU 排序，且门面/导出/v2 账本的 available 是同一个数
+[PASS ] stock_never_negative                   104 ms  FlowERP：/home/rchua/GO/flowERP-customer；stock_never_negative；退出码 0；缺货请求被拒绝，库存未发生部分写入
+[PASS ] receiving_is_idempotent                103 ms  FlowERP：/home/rchua/GO/flowERP-customer；receiving_is_idempotent；退出码 0；重复入库键只生效一次
+[PASS ] cancellation_releases_reservation      126 ms  FlowERP：/home/rchua/GO/flowERP-customer；cancellation_releases_reservation；退出码 0；取消 reserved 订单后完整释放预占
+[PASS ] illegal_transition_is_blocked          100 ms  FlowERP：/home/rchua/GO/flowERP-customer；illegal_transition_is_blocked；退出码 0；draft 订单不能跳过预占直接发货
+[PASS ] purchase_requires_approval             107 ms  FlowERP：/home/rchua/GO/flowERP-customer；purchase_requires_approval；退出码 0；未审批被阻断，审批后可入库
+[PASS ] purchase_request_preserves_reason       89 ms  FlowERP：/home/rchua/GO/flowERP-customer；purchase_request_preserves_reason；退出码 0；采购申请保留 SKU、数量、原因和稳定身份，无效数量或空白原因没有部分写入
+[PASS ] order_total_matches_lines              111 ms  FlowERP：/home/rchua/GO/flowERP-customer；order_total_matches_lines；退出码 0；订单总额与明细计算一致
+[PASS ] ecommerce_channel_order_is_idempotent_and_guarded   193 ms  FlowERP：/home/rchua/GO/flowERP-customer；ecommerce_channel_order_is_idempotent_and_guarded；退出码 0；渠道订单重放幂等，审单生成销售单并原子预占，缺货订单保留异常且未超卖
+[PASS ] channel_callback_lease_is_exclusive_and_bounded   117 ms  FlowERP：/home/rchua/GO/flowERP-customer；channel_callback_lease_is_exclusive_and_bounded；退出码 0；渠道回传仅允许一个具名 Worker 持有租约；越权确认被阻断，失败保留证据并进入有界退避
+[PASS ] production_schema_invariants            69 ms  FlowERP：/home/rchua/GO/flowERP-customer；production_schema_invariants；退出码 0；生产 Schema、权限字典、外键与数据库完整性检查通过
+[PASS ] multi_location_transfer_conserves_stock    88 ms  FlowERP：/home/rchua/GO/flowERP-customer；multi_location_transfer_conserves_stock；退出码 0；跨库位调拨前后库存总量守恒，来源与目标账一致
+[PASS ] stale_stock_count_is_blocked            89 ms  FlowERP：/home/rchua/GO/flowERP-customer；stale_stock_count_is_blocked；退出码 0；盘点快照后发生库存变化，过账被可靠阻断
+[PASS ] sales_credit_and_atomic_reservation    310 ms  FlowERP：/home/rchua/GO/flowERP-customer；sales_credit_and_atomic_reservation；退出码 0；正式销售两行正常预占、第二行缺货、第二次写入失败均已检查；失败后四表完整不变
+[PASS ] backup_is_restorable                    92 ms  FlowERP：/home/rchua/GO/flowERP-customer；backup_is_restorable；退出码 0；在线备份校验和、解压与 SQLite 完整性复验全部通过
+[PASS ] purchase_invoice_three_way_match       118 ms  FlowERP：/home/rchua/GO/flowERP-customer；purchase_invoice_three_way_match；退出码 0；采购订单、已过账收货与供应商发票的数量和单价匹配通过，超收发票被阻断
+[PASS ] payable_aging_tracks_open_supplier_exposure   170 ms  FlowERP：/home/rchua/GO/flowERP-customer；payable_aging_tracks_open_supplier_exposure；退出码 0；应付账龄按到期日分桶，部分付款只保留未结余额，并与驾驶舱逾期应付一致
+[PASS ] double_entry_fifo_and_subledger_reconciliation   152 ms  FlowERP：/home/rchua/GO/flowERP-customer；double_entry_fifo_and_subledger_reconciliation；退出码 0；FIFO 销售成本、复式凭证、收款核销及库存/应收子账总账自动对账全部通过
+[PASS ] bank_statement_control_and_reconciliation   104 ms  FlowERP：/home/rchua/GO/flowERP-customer；bank_statement_control_and_reconciliation；退出码 0；不平对账单被阻断，银行流水自动匹配收付款后与银行存款总账余额一致
+{"total": 19, "passed": 19, "blocking_failed": 0, "observing_failed": 0, "decision": "pass"}

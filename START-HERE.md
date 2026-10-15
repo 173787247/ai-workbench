@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 05:07 +0800
+> 最后更新：2026-10-16 05:09 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -9867,5 +9867,78 @@ eval/harness.py：注册一行
 [ ] ⭐ 跑控制仓库完整套件，确认只多一条、无回归
 [ ] ⭐ 交付「完成思路 + 代码链接」
 [ ] ⚠️ spec_sha256 为空的原因；ar_aging 是否要在 API 层暴露（本次未做，属另一需求）
+[ ] 🚩 待本人：列规格取舍、具名审核、原使用者复验
+```
+
+---
+
+# ⭐⭐⭐⭐ 毕设：控制仓库侧的委托包装完成（19 ⇒ 20，无回归）
+
+## 改了三处
+
+```
+eval/cases.py：加包装函数（照 payable_aging_tracks_open_supplier_exposure 的写法）
+  def ar_aging_export_keeps_columns():
+      from workbench.external_project import evaluate_case
+      return evaluate_case('ar_aging_export_keeps_columns')
+eval/harness.py:13：PROJECT_CASES 里加 'ar_aging_export_keeps_columns'
+eval/harness.py：EVALS 里加一行（blocking）
+```
+
+## 委托真的跨了进程边界
+
+```
+⭐ [PASS] ar_aging_export_keeps_columns 106 ms
+   detail：「FlowERP：/home/rchua/GO/flowERP-customer；ar_aging_export_keeps_columns；
+           退出码 0；应收账龄导出走明细七列、空结果留列名、不混汇总、只读，
+           且权限拒绝不伪装成空文件」
+⇒ 它写明了哪个 FlowERP 根、哪个用例、那个子进程的退出码、子进程返回的结论
+  ⇒ 依据 external_project.py:87~95 的子脚本（含 'ERP import escaped candidate' 守卫）
+    ⇒ 所以它是真的另起一个进程跑独立 FlowERP 的检查，并把 evidence 回传
+```
+
+## 一个必须先读懂的机制
+
+```
+⚠️ eval/harness.py:73：
+   if not case_names:
+       selected = [item for item in selected if item[0] not in PROJECT_CASES]
+⇒ PROJECT_CASES 里的检查默认不进整批，只有显式 --case 才跑
+  ⇒ 因为它们是委托给独立 FlowERP 的，没有项目时跑不了
+⚠️ 而我第一版对照就这样被骗了一次：--suite all 的 before/after 都是 14，新增 []
+   ⇒ 看起来「我的改动没生效」
+     ⇒ 而真相是整批设计上不跑项目类
+       ⇒ 修法：显式把那 20 条列出来跑 ⇒ 这才是正确的对照
+         ⇒ 教训：「总数没变」不等于「没生效」，要先读懂过滤规则
+```
+
+## 数清三类与正确对照
+
+```
+⭐ EVALS 总数 34 ｜ PROJECT_CASES 20 ｜ 非项目类（整批跑）14 ｜ = 34
+
+整批（14 条）：before/after 都 14/14 ⇒ 设计上不含项目类，两边一样是正确的
+项目类（19 ⇒ 20）：before {total:19, passed:19} 且 grep -c 我的名字 = 0
+                 after  {total:20, passed:20}
+⇒ 新增 ['ar_aging_export_keeps_columns']；减少（无）；从绿变红（无）
+```
+
+## 一处要说清的：红 ⇒ 绿发生在哪一侧
+
+```
+⚠️ 控制仓库侧没有出现红 ⇒ 绿
+   ⇒ 因为红 ⇒ 绿发生在独立 FlowERP 那侧
+     · FlowERP 侧：起点 19/19 ⇒ 加检查 1 红 ⇒ 实现后 20/20
+     · 控制仓库侧：委托包装只证明边界是通的，且没有回归
+   ⇒ 正确表述：验证是两段 —— 产品侧的红⇒绿、控制侧的委托可用与无回归
+     ⇒ 不能把控制侧的 20/20 说成「产品侧也被验了两次」
+```
+
+## 待办
+
+```
+[ ] ⭐ 交付「完成思路 + 代码链接」（毕设的最后一项）
+[ ] ⚠️ spec_sha256 为空的原因（三个 Task 都空）
+[ ] ⚠️ ar_aging 是否要在 API 层暴露（本次只做了 ReportService 出口）
 [ ] 🚩 待本人：列规格取舍、具名审核、原使用者复验
 ```
