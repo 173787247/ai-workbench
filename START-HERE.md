@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 04:41 +0800
+> 最后更新：2026-10-16 04:42 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -8291,4 +8291,67 @@ A 的改动未提交 ⇒ 没有现成的 commit
 [ ] B 的检查候选 ⇒ 冻结 ⇒ course-submit（--session-baseline-ref 用那个新 commit）
 [ ] §10 四行证据表、feedback-evidence-review Skill
 [ ] 🚩 待本人：A 的具名审核、reviewed_by
+```
+
+---
+
+# 🎉 L15 B 的基线就位
+
+```
+⭐ B 的基线 commit = 6ae4813f1b028d133482a197cdd5896846366c73
+   来源：9a4e9eee29d4（A 的冻结提交）+ A 的 diff
+   A 的 diff sha256 = 375c93cd86a73139baf5ba306b57f4b426108e817415dba41b2e39a028305f35
+   worktree = …/course-worktrees/TASK-PREP-L15B-baseline
+```
+
+## 必须写明的一层
+
+```
+⚠️ B 的基线 commit 是我从 A 的冻结点加上 A 的未审核改动生成的
+   它不代表 A 已被接受：A 的 Task 仍是 review、reviewed_by=None；A 的候选仍导不出来
+   ⇒ 依据：手册「不把失败改写为成功」、辅导资料「不能通过改写历史掩盖错误」
+     ⇒ 而我这样做没有改写历史：A 的 worktree 一字未动，B 的起点是新造的 commit
+```
+
+## 三步都留了证据
+
+```
+① 取 A 的 diff（只在 A 的 worktree 里读，不提交）：52 行、2926 字节、有 sha256
+② 建新 worktree（基线 9a4e9ee）⇒ git apply --check 干净 ⇒ apply ⇒ 提交 ⇒ 6ae4813
+   ⇒ git merge-base --is-ancestor course/l15-start 通过（满足 course_delivery.py:90）
+③ 回查 A 的 worktree：HEAD 未变，状态仍是那三行
+```
+
+## 我的手工 worktree 少了一步
+
+```
+⚠️ 第一次跑静态两条是红的：
+   [BLOCK] raw_feedback_cannot_be_blocking  AssertionError: 课程能力尚未交付：raw_feedback_guard
+⇒ 根因：git worktree add 只把 commit 拉出来，不做 apply_student_start
+  而 course-submit 会做（course_workspace.py:57~59）
+    ⇒ 所以 PROGRESSION.json 回来了，而 raw_feedback_guard 不在 enabled 里，门闩拦住
+      ⇒ 真实流程里不会有这个问题
+        ⇒ 我补跑真的 apply_student_start(BWT, 15)，门闩解除
+```
+
+## 补上之后的两层验证
+
+```
+⭐ 静态合同两条 ⇒ 退出码 0
+   [PASS] delivery_evidence_and_review_controls
+   [PASS] raw_feedback_cannot_become_blocking
+   {"total": 2, "passed": 2, "blocking_failed": 0, "decision": "pass"}
+⭐ B 要修的那件事在基线上红：四个报表方法全部抛错
+   ValueError: 空结果需要调用方提供 fieldnames，否则无法确定文件结构
+⇒ 所以 B 的起点：static_failed 空、dynamic_failed 非空 ⇒ 起点有效
+```
+
+## 待办
+
+```
+[ ] ⭐ 写 B 的六段需求（不沿用 A 的值，含「未找到可用记忆」，基线如实标注）
+[ ] ⭐ B 的检查候选（在 TASK-PREP-L15B-baseline 里只加检查，不实现）⇒ 冻结 ⇒ new.json 看它红
+[ ] ⭐ course-submit（--session-baseline-ref = 6ae4813…）
+[ ] §10 四行证据表、feedback-evidence-review Skill
+[ ] 🚩 待本人：A 的具名审核、reviewed_by、采用决定的决定人、原反馈者复验
 ```
