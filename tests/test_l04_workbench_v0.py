@@ -126,17 +126,19 @@ class V0Tests(unittest.TestCase):
         self.assertEqual("write_scope_required", self.data(r2).get("error_code"))
         self.assertFalse((cand / "a").exists(), "缺写集时必须先拒绝，不能跑完再判")
 
-    def test_a10_write_outside_candidate_is_detected_and_rejected(self):
-        """⭐ A-10 **候选父目录子树内（深度 ≤ 2）的越界写入要被发现并拒绝**。
+    def test_a10_writes_outside_candidate_are_not_covered(self):
+        """⚠️ A-10 **反向记录一条已知限制**：候选目录**之外**的写入**不被检测**。
 
-        这一条是 L04 独立复验者查出来的高危缺口：
-        原来 `--allow-write workbench/` 下用 `../` 改掉候选目录外的文件，
-        报告却是 `{"ok": true, "changed": [], "out_of_scope": []}` —— **零告警**。
+        ⭐ 这条测试**不断言保护存在 ✗ 它把"保护不存在"钉住**，免得以后再有人把
+        `--allow-write` 读成"禁止一切越界"。
 
-        ⚠️ **这条测试名不要读大了**：它只覆盖**父目录子树内 ✗ 深度 ≤ 2 ✗ 非 `.git`**。
-        第二轮复验实测**六类形状仍然漏检**（祖父目录 ✗ 无关绝对路径 ✗ 深度 > 2 ✗
-        软链接 ✗ `.git` 路径 ✗ 源仓库深处）⇒ **检测器不是边界** ✗ 见
-        `execution.py` 的 `_snapshot_outside` docstring 与 `SUBMISSION.md`。
+        来历（**L04 两轮独立复验 ✗ 见 `lesson-04-submission/复验结论与重修.md`**）：
+          · 第一轮发现"候选之外写入零告警" ⇒ 我加了 `_snapshot_outside()` 去扫父目录
+          · 第二轮证明它只覆盖"父目录子树内 ✗ 深度 ≤ 2 ✗ 非 `.git`" ✗ **6 类形状仍漏检**
+            ✗ 而且**新引入假阳性**（别的进程改父目录 ⇒ 合法执行被拒 ✗ 罪名算错）
+          · ⭐ 并且它在真实流程里发作：候选放在 `/tmp` 下时，**检查支架自己写的证据文件**
+            被当成越界 ⇒ **一次五用例全过的复验被判成失败**
+          ⇒ **处置：撤掉那个函数** ✗ 把口径写进 `execution.py` 的模块 docstring
         """
         cand = self.dir / "cand"
         cand.mkdir()
@@ -149,11 +151,16 @@ class V0Tests(unittest.TestCase):
                 "--allow-write", "workbench/", "--timeout", "60",
                 "--exec", f'{PY} -c "import pathlib; pathlib.Path(chr(46)+chr(46)+chr(47)+chr(115)+chr(105)+chr(98)+chr(108)+chr(105)+chr(110)+chr(103)+chr(47)+chr(118)+chr(105)+chr(99)+chr(116)+chr(105)+chr(109)+chr(46)+chr(116)+chr(120)+chr(116)).write_text(chr(88))"',
                 "--runtime-dir", self.rt)
-        self.assertNotEqual(0, r.returncode, "候选目录之外的写入必须被拒绝")
         d = self.data(r)
-        self.assertEqual("escaped_candidate", d.get("error_code"))
-        self.assertTrue(d.get("escaped_candidate"), "要列出被越界改动的文件")
+        # ⚠️ 如实记录：本次执行**不会**因为候选之外被改而失败
+        self.assertEqual("X", victim.read_text(encoding="utf-8"),
+                         "前置：越界写入确实发生了")
+        self.assertNotIn("escaped_candidate", json.dumps(d, ensure_ascii=False),
+                         "已撤掉那个会误报的字段")
         self.assertNotIn("已回滚", json.dumps(d, ensure_ascii=False))
+        # ⭐ 并把"覆盖范围"钉在模块 docstring 里（改窄/改宽都要动这条测试）
+        import workbench.execution as ex
+        self.assertIn("检测器不是边界", ex.__doc__ or "")
 
     # ── ③ 失败与超时 ──
     def test_a07_failing_command_is_not_recorded_as_success(self):

@@ -9,6 +9,25 @@
   ① **仅复验模式不调用写入执行器**。
   ② ⭐ **执行退出码 0 但改动越界 ⇒ 拒绝**（**防止实现退化为一律拒绝**）。
   ③ ⭐ **超时或越界是"停止"✗ 不是"自动回滚"** —— 措辞与字段都按这个写。
+
+⚠️⚠️ **写集检查的真实覆盖范围（必须照实读 ✗ 别读大）**：
+
+```
+✅ **覆盖**：**候选目录内部**——逐文件快照 ✗ 与写集比对 ✗
+   命令退出码为 0 但改了写集之外的文件 ⇒ `out_of_scope` ⇒ 拒绝
+❌ **不覆盖**：**候选目录之外的任何写入** ⇒ **完全没有检测** ✗ **零告警**
+```
+
+⇒ ⭐ **检测器不是边界。** 真正的边界要靠工作区权限（**本环境没有**）。
+⇒ ⚠️ **这件事的经过**（**L04 两轮独立复验 ✗ 如实记**）：
+  第一轮复验发现"候选目录之外的写入零告警"⇒ 我加了一个 `_snapshot_outside()`
+  去扫候选的父目录 ⇒ **第二轮复验证明它只覆盖"父目录子树内 ✗ 深度 ≤ 2 ✗ 非 `.git`"**
+  ✗ **6 类形状仍漏检** ✗ 而且**新引入假阳性**：别的进程改父目录下的文件 ⇒
+  合法执行被拒 ✗ 罪名算错。
+  ⇒ ⭐ **并且它在真实流程里当场发作过**：候选放在 `/tmp` 下时，
+  检查支架自己写的证据文件被当成"越界"⇒ 一次**五用例全过**的复验被判成失败。
+  ⇒ **处置：撤掉那个函数 ✗ 把口径照实写在这里**（**复验者建议的选项 (a)**）。
+⇒ ⚠️ **这条口径要不要改成"只覆盖候选目录内部"并接受它 ✗ 是人的决定**（见 `lesson-04-submission/SUBMISSION.md`）。
 """
 from __future__ import annotations
 
@@ -125,51 +144,6 @@ def _snapshot(root: Path) -> dict[str, str]:
     return out
 
 
-def _snapshot_outside(candidate: Path, depth: int = 2) -> dict[str, str]:
-    """扫候选目录**之外**的邻近区域，用于**部分**检测 `../` 逃逸。
-
-    ⚠️⚠️ **这是事后检测 ✗ 不是沙箱**，而且**覆盖面很窄**。**不要把"没有告警"读成"没有越界"。**
-
-    **实际覆盖**（2026-10-16 L04 第二次独立复验逐条实测）：
-      ✅ 覆盖：候选的**父目录子树内 ✗ 深度 ≤ 2 ✗ 路径不含 `.git`**
-      ❌ **漏检**（六条反例，都真的改了候选之外的文件 ✗ 都报 `ok=true` 零告警）：
-          · 祖父目录 `../../x`          · 无关目录的绝对路径
-          · 父目录内深度 > 2             · **候选内的软链接指向外部**
-          · 兄弟仓库的 `.git/config`     · 候选位于源仓库内时的深处路径
-
-    ⚠️ **已知假阳性**（同一轮复验实测）：
-      若候选与**别的会变的进程**共用父目录（共享工作区 ✗ 日志目录 ✗ `.runtime/` ✗
-      别的 Agent 的输出），那些进程一改文件 ⇒ **本次合法执行会被拒** ✗
-      而且报告会把改动**错误归因**给这条命令。
-
-    ⇒ ⭐ **结论：检测器不是边界。** 真正的边界要靠工作区权限（**本环境没有**）。
-      口径是改成"只覆盖候选目录内部"还是补沙箱 ⇒ **是人的决定**（见 `SUBMISSION.md`）。
-    """
-    parent = candidate.parent
-    out: dict[str, str] = {}
-    base_depth = len(parent.parts)
-    for p in sorted(parent.rglob("*")):
-        if not p.is_file():
-            continue
-        if len(p.parts) - base_depth > depth:
-            continue
-        try:
-            if candidate == p or candidate in p.parents:
-                continue                       # 候选目录内部由 _snapshot 负责
-        except OSError:
-            continue
-        if ".git" in p.parts and p.name not in (".gitignore",):
-            continue
-        try:
-            if p.stat().st_size > MAX_SNAPSHOT_BYTES:
-                out[str(p)] = f"<too large: {p.stat().st_size} bytes>"
-                continue
-            out[str(p)] = p.read_text(encoding="utf-8", errors="replace")
-        except OSError:
-            out[str(p)] = "<unreadable>"
-    return out
-
-
 def _diff(before: dict[str, str], after: dict[str, str]) -> str:
     lines: list[str] = []
     for name in sorted(set(before) | set(after)):
@@ -202,7 +176,6 @@ def run_candidate(*, envelope: Envelope, command: str | None = None) -> dict:
     """在候选目录跑一次受控执行 ✗ 返回**真实结果**（不改成功与否的表述）。"""
     cand = envelope.candidate
     before = _snapshot(cand)
-    outside_before = _snapshot_outside(cand)      # ⭐ 检测 `../` 逃逸
 
     if envelope.mode == "verify":
         return {"ok": True, "mode": "verify_only", "candidate": str(cand),
@@ -240,33 +213,19 @@ def run_candidate(*, envelope: Envelope, command: str | None = None) -> dict:
     elapsed = round(time.monotonic() - started, 3)
 
     after = _snapshot(cand)
-    outside_after = _snapshot_outside(cand)
     changed = sorted({n for n in set(before) | set(after) if before.get(n) != after.get(n)})
     out_of_scope = [n for n in changed if not _in_scope(n, envelope.write_scope)]
-    # ⭐ 复验者查到的高危缺口：候选目录之外的写入
-    escaped = sorted({n for n in set(outside_before) | set(outside_after)
-                      if outside_before.get(n) != outside_after.get(n)})
     diff = _diff(before, after)
 
     result = {"ok": False, "mode": "codex", "candidate": str(cand),
               "returncode": rc, "stdout": out[-4000:], "stderr": err[-4000:],
               "diff": diff, "changed": changed, "out_of_scope": out_of_scope,
-              "escaped_candidate": escaped,
               "timed_out": timed_out, "elapsed_sec": elapsed,
               "write_scope": list(envelope.write_scope), "timeout": envelope.timeout,
               # ⭐ 「不把停止误写成自动回滚」⇒ 显式声明：**不回滚 ✗ 改动留在原地**
               "rolled_back": False,
               "stop_semantics": "停止执行并保留证据；不自动回滚"}
 
-    if escaped:
-        # ⭐ **候选目录之外的写入** ⇒ 拒绝，即使命令退出码是 0
-        result["error_code"] = "escaped_candidate"
-        result["note"] = (
-            f"命令退出码 {rc} ✗ 但检测到改动：{escaped} ⇒ **拒绝**。"
-            "⚠️ 本实现是**事后检测 ✗ 不是沙箱**，且**只覆盖候选父目录子树内 ✗ 深度 ≤ 2 ✗ "
-            "非 `.git` 的路径**；**没有告警不等于没有越界** ✗ "
-            "也不能区分是不是**别的进程**改的（**已知假阳性**）")
-        return result
     if timed_out:
         result["error_code"] = "timeout"
         result["note"] = "命令超时 ⇒ **已停止**；已发生的改动保留在原地 ✗ 未自动回滚"
