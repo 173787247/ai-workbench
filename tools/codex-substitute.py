@@ -207,6 +207,30 @@ def apply_l09(workspace: Path) -> dict:
             "note": "只移除短路，释放分支按原状态执行；未新增任何查询"}
 
 
+# ══════════════════════════════════════════════════════════════════════
+# L10：发货状态机守卫被短路（`if False and` —— 第四次同一手法）
+# ══════════════════════════════════════════════════════════════════════
+L10_BROKEN = """            if False and order["status"] != OrderStatus.RESERVED:"""
+L10_FIXED = """            if order["status"] != OrderStatus.RESERVED:"""
+
+
+def apply_l10(workspace: Path) -> dict:
+    target = workspace / "flowerp" / "service.py"
+    if not target.is_file():
+        return {"changed": False, "error": f"写集内没有 {target}"}
+    text = target.read_text(encoding="utf-8")
+    if L10_BROKEN not in text:
+        if L10_FIXED in text:
+            return {"changed": False, "reason": "发货守卫已经是恢复状态"}
+        return {"changed": False,
+                "error": '找不到 `if False and order["status"] != OrderStatus.RESERVED:` ✗ '
+                         "候选与预期不符 ✗ 停下不动手"}
+    # 只让原守卫生效：不新增第二条状态判断，也不动库存与流水的写入。
+    target.write_text(text.replace(L10_BROKEN, L10_FIXED, 1), encoding="utf-8")
+    return {"changed": True, "file": "flowerp/service.py",
+            "note": "只移除短路，状态机守卫按原样生效；未新增判断"}
+
+
 def pick(workspace: Path) -> str:
     service = workspace / "flowerp" / "service.py"
     if service.is_file():
@@ -215,6 +239,8 @@ def pick(workspace: Path) -> str:
             return "l05"
         if L09_BROKEN in text:
             return "l09"
+        if L10_BROKEN in text:
+            return "l10"
     return "l07"
 
 
@@ -229,13 +255,13 @@ def main(argv=None) -> int:
     if "--candidate" in argv:
         ap = argparse.ArgumentParser(description="Codex 替代执行器")
         ap.add_argument("--candidate", type=Path, required=True)
-        ap.add_argument("--which", choices=("auto", "l05", "l07", "l09"), default="auto")
+        ap.add_argument("--which", choices=("auto", "l05", "l07", "l09", "l10"), default="auto")
         ap.add_argument("--report", type=Path)
         args, _unknown = ap.parse_known_args(argv)
         ws = args.candidate.resolve()
         which = pick(ws) if args.which == "auto" else args.which
         body = {"l05": lambda: apply_l05(ws), "l07": lambda: apply_l07(ws),
-                "l09": lambda: apply_l09(ws)}[which]()
+                "l09": lambda: apply_l09(ws), "l10": lambda: apply_l10(ws)}[which]()
         out = {"executor": "codex-substitute (DeepSeek Harness)", "is_codex": False,
                "note": "本机没有 Codex CLI；这是本人授权的替代执行器，不是 Codex",
                "which": which, "candidate": str(ws), **body}
@@ -265,7 +291,7 @@ def main(argv=None) -> int:
 
     which = pick(workspace)
     body = {"l05": lambda: apply_l05(workspace), "l07": lambda: apply_l07(workspace),
-            "l09": lambda: apply_l09(workspace)}[which]()
+            "l09": lambda: apply_l09(workspace), "l10": lambda: apply_l10(workspace)}[which]()
     changed = list(body.get("staged") or [])
     if body.get("changed") and body.get("file"):
         changed.append(body["file"])

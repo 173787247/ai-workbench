@@ -1,7 +1,7 @@
 # START-HERE · 个人 AI 研发工作台（Codex AI 工程交付行动营）
 
 > **写给下一个会话 —— 读完这一份就能接手。**
-> 最后更新：2026-10-16 02:52 +0800
+> 最后更新：2026-10-16 02:56 +0800
 > ⚠️ **本文件在个人项目根目录（**不是 ~/GO/START-HERE.md**）✗ 那份是归档前的记录**
 
 ---
@@ -2078,3 +2078,70 @@ $ ./.venv/bin/python -X utf8 -m agent.loop --max-rounds 1 --token-budget 30000
 ```
 ⚠️ **PPT 288 行 ✗ `reference/参考说明.md` ✗ `assets/README.md` ✗ `examples/skills`**
 ```
+
+
+---
+
+# ⭐ L10 §4~§6（**两份实验 ✗ 真实修复 ✗ 安全停止做到一半**）
+
+## §4 两份隔离候选（**用手册自己的脚本** ✓）
+
+```
+`l10-two-runs-4cee2f00…/converge-candidate` ✗ `stop-candidate` ✗ 两份 manifest ✗ copies.json
+⇒ ✅ 退出码 0 ⇒ ⭐ **`copied == baseline` 过了 ⇒ agent/ eval/ tests/ flowerp/ 指纹逐字相同** ✓
+⇒ ⭐ `{"same_loop_checks_business": true}` ✓
+⚠️ 脚本 `excluded = {".git", ".venv", ".runtime", …}` ⇒ **复制品没有 `.git` ✗ 没有 `.venv`** ✓
+```
+
+## §4 授权上下文（**十字段 ✗ 我按授权填了默认值并标注** ✓）
+
+```
+⚠️ **本人指示**：「**先填默认值并标注「待本人确认」**」⇒ 三处默认值写进 `_pending_confirmation`：
+   `requirement_id` ✗ `actor` ✗ **本人尚未核对**
+✅ **建了真实父任务** `TASK-42402B6E34`（**因为入口会查库** ✓）
+✅ 两份上下文都通过入口校验：`sha256 22464186…` / `455c49fc…` ✓
+```
+
+## §5 真实修复（**经控制工作台** ✓）
+
+```
+`TASK-56D04E9DFC`（**source-task-id TASK-42402B6E34** ✗ workspace 收敛候选）
+`74a190b5` → **`0663356d`** ✗ `:290` **`if order["status"] != OrderStatus.RESERVED:`** ✓
+⭐ **我复验五项全过**：`{"total":5, "passed":5, "decision":"pass"}` ✓
+   `illegal_transition_is_blocked` **"draft 订单不能跳过预占直接发货"** ✓
+   四项个人检查全 PASS（**含"状态机以 InvalidTransition 拒绝"** ✓）
+⚠️ **但任务 `status: "rework"`** —— **两项环境性红**：
+   `delivery_evidence_and_review_controls` ✗ `web_api_and_persistence_projection_agree`
+   ⇒ 「**目标项目必须是独立 Git 工作区**」⇒ ⚠️ **复制品没有 `.git`** ✓
+   ⇒ ⭐ **手册 §1**：「**不把环境错误算作业务红灯**」⇒ **正确判据是"四项 + 冻结回归"** ✓
+```
+
+## §6 安全停止（**前两步完成 ✗ 第三步卡住** ✓）
+
+```
+✅ ① 模块路径核对（**停止候选内三个模块都在** ✓）
+✅ ② ⭐⭐ **执行前报告与收敛候选修复前签名逐字相同**：
+     两边都是 ('block', 4) ✗ 四个失败名完全相同 ✓
+     ⇒ ⭐ **"同一红起点"得到证实** ✓
+✅ ③ **"同一新版 Loop"复核** —— ⚠️ **我第一次比出"不同"✗ 因为我的脚本没排除 `__pycache__`** ✓
+     按同一口径：**三份 `agent/loop.py` sha 全是 `5a447170b64cd8f0`** ✗
+     `flowerp/service.py` 三份全是 `74a190b5a21a6e4c`（**未修** ✓）
+⚠️ ④ **跑 `--codex` ⇒ `FileNotFoundError: 'codex'`** ✓
+     ⇒ ⭐ **根因**：`run_personal_loop` 默认 `executor=_run_codex` ✗ **它调真的 `codex`** ✓
+     ⇒ ⭐⭐ **而手册第 ⑤ 条早说了**：「**不得直接套用参考 `_run_codex` 的宽泛
+       workspace-write 当逐文件授权**」✗ 「**每次修改经控制工作台 `task-create`/`task-run`**」✓
+     ⇒ ⚠️ **我接上了个人入口 ✗ 但没换执行器** ⇒ **如实记为未完成** ✓
+     ⚠️ **业务源码 `74a190b5` 前后一致** ⇒ **它没改代码** ✓
+        ⇒ ⭐ **但原因是"异常在写之前中止"✗ 不是"判断对了"** ✓
+        ⇒ ⚠️ **所以"安全停止"这次没有真正被验到** ✓
+```
+
+## 下一步
+
+```
+[ ] ⭐ **换执行器**：走控制工作台 `task-create … --execute-code` + `task-run`（**从控制目录/解释器** ✓）
+[ ] **重跑 §6** ⇒ 应得 `stopped_max_rounds` ✗ **零编码** ✓
+[ ] ⚠️ **Spec 的 acceptance 措辞改**（"完整 blocking pass" → "四项 + 冻结回归 pass"）
+    ⇒ ⭐ 依据：**复制品无 `.git` ⇒ 两项环境性红消不掉** ✗ **手册：环境错误不算业务红灯** ✓
+[ ] 🚩 **具名接受**（`task-review`）⇒ **待本人** ✓
+[ ] ⚠️ 待补：**PPT 288 行 ✗ `reference/` ✗ `assets/` ✗ `examples/skills`**
