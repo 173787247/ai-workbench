@@ -40,13 +40,13 @@ class WorkbenchBootstrapTests(unittest.TestCase):
 
     # ---------- WB-01 初始化并跨进程重查 ----------
     def test_wb01_init_then_query_persists(self):
-        code, out, err = run(["workbench-init", "--owner", "grandocean",
+        code, out, err = run(["workbench-init", "--owner", "test-owner",
                               "--name", "个人 AI 研发工作台"], self.runtime)
         self.assertEqual(code, 0, f"init 应成功，实际 {code}\nstdout={out}\nstderr={err}")
         code, out, err = run(["workbench-status"], self.runtime)
         self.assertEqual(code, 0, f"status 应成功，实际 {code}\n{err}")
         payload = json.loads(out)
-        self.assertEqual(payload["workbench"]["owner"], "grandocean")
+        self.assertEqual(payload["workbench"]["owner"], "test-owner")
 
     def test_wb01b_init_refuses_to_overwrite_other_owner(self):
         run(["workbench-init", "--owner", "alice"], self.runtime)
@@ -57,7 +57,7 @@ class WorkbenchBootstrapTests(unittest.TestCase):
 
     # ---------- WB-02 项目登记 + 任务创建 + 快照 ----------
     def setUpLedger(self):
-        self.assertEqual(run(["workbench-init", "--owner", "grandocean"], self.runtime)[0], 0)
+        self.assertEqual(run(["workbench-init", "--owner", "test-owner"], self.runtime)[0], 0)
         self.assertEqual(run(["workbench-project-add", "--project-id", "P-1",
                               "--name", "个人 AI 研发工作台"], self.runtime)[0], 0)
         self.spec = self.base / "spec.md"
@@ -207,7 +207,7 @@ class WorkbenchBootstrapTests(unittest.TestCase):
 
     # ---------- WB-12 数据边界 ----------
     def test_wb12_no_flowerp_connection(self):
-        run(["workbench-init", "--owner", "grandocean"], self.runtime)
+        run(["workbench-init", "--owner", "test-owner"], self.runtime)
         code, out, _ = run(["workbench-status"], self.runtime)
         self.assertEqual(code, 0)
         payload = json.loads(out)
